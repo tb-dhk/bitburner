@@ -1,0 +1,55 @@
+ok so for finding the number of ways to sum with 2 numbers
+it's generally just
+1 to sum // 2
+
+for 3 numbers its a bit more complex
+3 1 1 // only one way
+2 1 2 // only one way
+
+4 1 1 // oow
+3 1 2 // oow
+2 2 2 // if we went to 1 and 3 it would kind of get out of hand
+
+5 1 1 // oow
+4 1 2 // oow
+3 2 2 // not oow 
+3 1 3 // this is the alt
+
+i think it works if you have a framework where you like
+have to write them in descending order
+then once it's proven that a certain number is impossible you move on
+
+so for eg lets try 10 with 4 numbers
+
+// rule of thumb is if you have n numbers you always start with s - n + 1
+7 1 1 1 // 10 - 4 + 1 = 7
+6 2 1 1 // oow for 6
+5 3 1 1 // so general rule for if you're changing a number is you always start with 1s at the end
+5 2 2 1 // this is the last possible 5 because for 5 1, (10 - (5+1)) / (4 - 2) > 1
+// so i think the general test for whether its possible to add on after a set m of numbers is like
+// (s - sum(m)) / (n - len(m)) > min(m)
+// basically it means that there will be at least 1 number coming after that will be bigger than the smallest number in set m
+// so like cannot lor
+4 4 1 1
+4 3 2 1 // we start with 4 and 3, oow
+4 2 2 2 // 4 and 2 also oow because the other option for the last two is 3 1
+// then we know for sure 4 1 cannot because (10 - (4+1)) / (4 - 2) is 2.5 which is bigger than 1
+// on the other hand 4 2 can bc (10 - (4+2)) / (4 - 2) is 2 which is equal to 2
+3 3 2 2
+3 3 3 1
+// 3 2 not possible bc you need a 3 or a 4 so we move to 2
+// 2 is impossible because 2 2 2 2 is 8
+// end
+
+i think in a computer this would usually be a recursive algorithm
+so lets try sums(10, 4)
+
+sums(10, 4):
+- 7 + sums(3, 3) // we start with 7 because it's s - n + 1
+  - 1 + sums (2, 2) // we start with 1 because it's s - n + 1
+- 6 + sums(4, 3)
+  - 2 + sums (2, 2) // again, s - n + 1. 3 is not possible because you cant split up 1 into 2 numbers
+  // 1 + sums (3, 2) is not possible because (4 - 1) / (3 - 1) is 1.5 which is > 1
+- 5 + sums(5, 3)
+- 4 + sums(6, 3)
+- 3 + sums(7, 3)
