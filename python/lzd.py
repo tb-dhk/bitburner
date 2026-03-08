@@ -1,19 +1,24 @@
 def split_chunks(string):
     chunks = []
+    new = True 
     while string:
         length = int(string[0])+1
-        if len(string) == length:
+        if len(string) in [2, length]:
             chunks.append(string)
             return chunks
-        if string[length].isnumeric():
+        elif string[0] == "0":
+            chunks.append("0")
+            string = string[1:]
+        elif new:
             chunks.append(string[:length])
             string = string[length:]
         else:
             chunks.append(string[:2])
             string = string[2:]
+        new = not new
     return []
 
-main = "6MPM10F6291buWb0xrz063joGrj897R77LvnR299Lg5b5hVXH088oCKtbCe"
+main = "7ewkgbpB72456RG480715vEWsF4503398IW8I1FWX09AVewYMtMt92"
 
 chunks = split_chunks(main)
 

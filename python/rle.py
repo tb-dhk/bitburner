@@ -11,4 +11,4 @@ def rle(string):
         string = string[number:]
     return result
 
-print(rle("YYllEErrrrrraaXXXr00000VGGGGGGGGGGGyyyyyyyyyuux0tttttttDDDDDDDDDiya8fHHKKcjjjjjjG44w"))
+print(rle("HHHHHHHHHhh33MMaNNccddaaaaaaaaaJvvCCCCCCCCCCCCkkaa888888YYYYYYY5WW33DBBBBB"))

@@ -8,15 +8,16 @@ export function findServer(ns, target, current = "home", visited = new Set(), pa
   for (const neighbor of neighbors) {
     if (!visited.has(neighbor)) {
       const result = findServer(ns, target, neighbor, visited, [...path]);
-      if (result) return result;
+      if (result.length) return result;
     }
   }
 
-  return null; // target not found
+  return []; // target not found
 }
 
 export async function main(ns) {
   const list = findServer(ns, ns.args[0])
   ns.tprint(list)
-  ns.tprint(list.map(i => `connect ${i}`).join("; "))
+  navigator.clipboard.writeText(list.map(i => `connect ${i}`).join("; ")) 
+  ns.tprint("copied to clipboard.")
 }

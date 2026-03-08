@@ -47,7 +47,7 @@ def lz_encode(input_str):
 
     return ''.join(encoded)
 
-input_str = "0uE0uE0uE06Sebhxe8Sebhxe8SsjNOe8SsjNOe8b0lV1ZNY1ZNY1ZsDLBH"
+input_str = "1ERoX6B6UBVi426eUBViVeUBViVeUr5OBO65656565656565634poEdXk0poEd0poEd0poDqPXdqPXdqQeFPdbQe"
 encoded = lz_encode(input_str)
 print(encoded)
 print(f"Length of input: {len(input_str)}")

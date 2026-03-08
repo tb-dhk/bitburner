@@ -1,26 +1,29 @@
 import { allServers } from './allservers'
 
-async function dispatchProgram(ns, program, threads, ...args) {
+function dispatchProgram(ns, program, threads, ...args) {
   let count = 0
   const scriptRAM = ns.getScriptRam(program)
-  ns.tprint(`dispatching ${program}, aiming for ${threads} threads`)
 
   // iterate through all servers
-  for (let server of allServers(ns).slice(1)) {
+  const servers = allServers(ns).filter(i => ns.hasRootAccess(i));
+  for (let server of servers) {
     // find how many threads the program can push
-    const RAMLeft = ns.getServerMaxRam(server) - ns.getServerUsedRam(server)
+    const factor = server === "home" ? 0.1 : 1
+    const RAMLeft = (ns.getServerMaxRam(server) - ns.getServerUsedRam(server)) * factor
     const serverThreads = Math.min(Math.floor(RAMLeft / scriptRAM), threads - count)
+
+    ns.scp(program, server)
 
     // push as many as possible (while under total thread limit)
     if (serverThreads) {
       ns.exec(program, server, serverThreads, ...args)
+      count += serverThreads
     }
-    count += serverThreads
     if (count >= threads) {
       break
     }
   }
-  ns.tprint(`dispatched ${program} with ${count} threads`)
+  return count
 }
 
 async function findMaxThreads(ns, RAMLeft, target) {
@@ -38,10 +41,7 @@ async function findMaxThreads(ns, RAMLeft, target) {
   let multiplier = 1 / (1 - loss)
 
   let hackThreads = 0
-  let hackSecurity = 0
   let weakenThreads = 0
-
-  const weakenPerThread = ns.weakenAnalyze(1);
 
   if (RAMLeft < hackRAM + weakenRAM) {
     return [0, 0]
@@ -52,46 +52,42 @@ async function findMaxThreads(ns, RAMLeft, target) {
   let found = false
 
   if (formulas) {
-    perHack = Math.max(ns.formulas.hacking.hackPercent(server, player), 0.01)
+    perHack = Math.max(ns.formulas.hacking.hackPercent(server, player), 0.001)
   }
   
   while (true) {
+    if (loss < 0 || multiplier < 1) {
+      return 0 
+    }    
+
     if (formulas) {
       hackThreads = Math.floor(loss / perHack) 
     } else {
-      hackThreads = Math.floor(ns.hackAnalyzeThreads(target, server.moneyAvailable * multiplier))
+      hackThreads = Math.floor(ns.hackAnalyzeThreads(target, Math.min(server.moneyAvailable * Math.min(1, multiplier), ns.getServerMaxMoney(target))))
     }    
     
-    hackSecurity = ns.hackAnalyzeSecurity(hackThreads, target)
-    weakenThreads = Math.ceil(hackSecurity / weakenPerThread)
-
     const totalRAM = hackRAM * hackThreads + weakenRAM * weakenThreads
 
-    if (found || loss < 0) {
-      ns.tprint(loss, " ", multiplier)
-      return [hackThreads, weakenThreads].map(i => Math.floor(i))
+    if (found || loss < 0 || loss === 1) {
+      return Math.max(Math.floor(hackThreads), 0)
     }
 
-    if (totalRAM > RAMLeft || loss > 1) {
-      loss -= 0.01
-      multiplier = 1 / (1 - loss)
+    if (totalRAM > RAMLeft) {
+      loss = Math.max(0, loss - 0.01)
+      multiplier = Math.min(1 / (1 - loss), server.moneyMax)
       found = true
     } else {
-      loss += 0.01
-      multiplier = 1 / (1 - loss)
+      loss = Math.min(1, loss + 0.01)
+      multiplier = Math.min(1 / (1 - loss), server.moneyMax)
     }
-    if (loss < 0 || multiplier < 1) {
-      return [hackThreads, weakenThreads].map(i => Math.floor(i))
-    }
-
-    await ns.sleep(20)
+    await ns.sleep(1)
   }
 }
 
 export async function main(ns) {
   const target = ns.args[0]
 
-  const server = ns.getServer(target)
+  let server = ns.getServer(target)
   const player = ns.getPlayer()
 
   const delayBetween = 200; // ms gap between finishes
@@ -101,11 +97,6 @@ export async function main(ns) {
   let weakenTime = ns.getWeakenTime(target);
 
   const formulas = ns.fileExists("Formulas.exe", "home")
-  if (formulas) {
-    hackTime = ns.formulas.hacking.hackTime(server, player)
-    growTime = ns.formulas.hacking.growTime(server, player)
-    weakenTime = ns.formulas.hacking.weakenTime(server, player)
-  }
 
   const weaken1Delay = 0;
   const growDelay = weakenTime - growTime + delayBetween;
@@ -116,13 +107,22 @@ export async function main(ns) {
 
   // while true
   while (true) {
+    if (formulas) {
+      hackTime = ns.formulas.hacking.hackTime(server, player)
+      growTime = ns.formulas.hacking.growTime(server, player)
+      weakenTime = ns.formulas.hacking.weakenTime(server, player)
+    }
+
     // find number of threads needed to grow
-    const growThreads = Math.ceil(ns.formulas.hacking.growThreads(server, player, ns.getServerMaxMoney(target)))
-    ns.tprint("required threads to grow back to max: ", growThreads)
+    server = ns.getServer(target)
+    let growThreads = Math.ceil(ns.growthAnalyze(target, ns.getServerMaxMoney(target) / Math.max(server.moneyAvailable, 1)))
+    if (formulas) {
+      growThreads = Math.ceil(ns.formulas.hacking.growThreads(server, player, ns.getServerMaxMoney(target)))
+    }
 
     // find number of threads needed to combat security increase
-    const growSecurity = ns.growthAnalyzeSecurity(growThreads, target)
-    const weaken1Threads = Math.floor(growSecurity / weakenPerThread)
+    const weaken1Threads = Math.ceil((ns.getServerSecurityLevel(target) - ns.getServerMinSecurityLevel(target)) / weakenPerThread)
+    const weaken2Threads = Math.ceil(ns.growthAnalyzeSecurity(growThreads, target) / weakenPerThread)
 
     // within this, try to balance remaining RAM
     // between hack and weaken
@@ -130,15 +130,22 @@ export async function main(ns) {
     for (let server of allServers(ns).slice(1)) {
       RAMLeft += ns.getServerMaxRam(server) - ns.getServerUsedRam(server)
     }
-    const [hackThreads, weaken2Threads] = await findMaxThreads(ns, RAMLeft, target)
+    const hackThreads = await findMaxThreads(ns, RAMLeft, target)
 
     // dispatch
-    ns.tprint(`[${new Date().toISOString()}] `, `threads: ${[growThreads, weaken1Threads, hackThreads, weaken2Threads]}`)
-    dispatchProgram(ns, 'grow.js', growThreads, target, Math.max(0, growDelay));
-    dispatchProgram(ns, 'weaken.js', weaken1Threads, target, Math.max(0, weaken2Delay));
-    dispatchProgram(ns, 'hack.js', hackThreads, target, Math.max(0, hackDelay));
-    dispatchProgram(ns, 'weaken.js', weaken2Threads, target, Math.max(0, weaken1Delay));
-    ns.tprint("sleeping ", (weakenTime + delayBetween * 3 + 2000) / 1000, "s") 
-    await ns.sleep(weakenTime + delayBetween * 3 + 2000)
+    const realThreads = [
+      dispatchProgram(ns, 'weaken.js', weaken1Threads, target, Math.max(0, weaken1Delay)),
+      dispatchProgram(ns, 'grow.js', growThreads, target, Math.max(0, growDelay)),
+      dispatchProgram(ns, 'weaken.js', weaken2Threads, target, Math.max(0, weaken2Delay)),
+      dispatchProgram(ns, 'hack.js', hackThreads, target, Math.max(0, hackDelay))
+    ]
+    const plannedThreads = [weaken1Threads, growThreads, weaken2Threads, hackThreads]
+
+    const totalThreads = realThreads.reduce((a, b) => a + b, 0)
+    const milliseconds = totalThreads ? weakenTime + delayBetween * 3 + 2000 : 60000
+    if (milliseconds >= 30000 || ns.getHackingLevel() < 1000) {
+      ns.tprint(`[${target}] `, `deployed threads ${[realThreads]} (planned ${plannedThreads}), sleeping `, Math.round(milliseconds / 1000), "s - new cycle at ", new Date(Date.now() + milliseconds).toLocaleString())
+    }
+    await ns.sleep(milliseconds)
   }
 }

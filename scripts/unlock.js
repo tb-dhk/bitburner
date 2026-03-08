@@ -24,11 +24,7 @@ export async function main(ns) {
         ns.nuke(server);
         ns.tprint(`nuked ${server}`);
       } catch (e) {
-        if (e.includes("Not enough ports")) {
-          ns.tprint(`failed to nuke ${server} due to not enough ports`)
-        } else {
-          ns.tprint(`failed to nuke ${server}: ${e}`);
-        }
+        ns.tprint(`failed to nuke ${server}`)
       }
     }
   }

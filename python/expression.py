@@ -1,7 +1,7 @@
 from itertools import product
 
-digits = "575842426"
-target = 47
+digits = "62379"
+target = 36
 operators = ["", "+", "-", "*"]  # '' means no operator (concatenate digits)
 
 def evaluate_expression(expr):

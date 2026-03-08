@@ -17,11 +17,8 @@ export async function main(ns) {
       const moneyPct = ((money / maxMoney) * 100).toFixed(2);
       const secOver = (sec - minSec).toFixed(2);
 
-      ns.tprint(`[${target}]`);
-      ns.tprint(`  money: \$${money} / \$${maxMoney} (${moneyPct}%)`);
-      ns.tprint(`  security: ${sec} (min: ${minSec}, +${secOver})`);
+      ns.tprint(`[${target}]: \$${money.toExponential()} / \$${maxMoney.toExponential()} (${moneyPct}%); ${Math.round(sec * 100) / 100} security (min: ${minSec}, +${secOver})`);
     }
-    ns.tprint("")
-    await ns.sleep(10000)
+    await ns.sleep(60000)
   }
 }

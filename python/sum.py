@@ -22,8 +22,8 @@ def no_ways_sum(s, n, threshold=None, limit=[]):
         ways = [way for way in ways if not [i not in limit for i in way].count(True)] 
     return ways
 
-s = 115
-limit = [1,4,5,6,9,10,11,12,14,15,17,19]
+s = 66
+limit = [1,3,8,9,10,11,12,13,14,17,18,19]
 final = []
 for i in range(1, s):
     sm = no_ways_sum(s, i+1, limit=limit)

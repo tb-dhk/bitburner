@@ -11,5 +11,5 @@ if len(sys.argv) < 2:
     print("Usage: python sqrt_high_precision.py <large_number>")
     sys.exit(1)
 number_str = sys.argv[1]
-result = sqrt_high_precision(number_str, precision=200)
+result = round(sqrt_high_precision(number_str, precision=200))
 print(result)
