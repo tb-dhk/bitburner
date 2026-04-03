@@ -2,7 +2,7 @@ import findServer from "./findserver"
 import { nfgLevel, nextAugs, nextFactions, untouchedAugs } from "./nextfaction"
 import { 
   gym, minCombat, crimeForMoney,
-  nextCompany, businessPositions, softwarePositions, getCompanyPosition 
+  nextCompanies, businessPositions, softwarePositions, getCompanyPosition 
 } from "./common"
 
 // constants
@@ -47,7 +47,7 @@ export async function main(ns) {
       ns.singularity.travelToCity(cities[count % 6])
     }
 
-    const company = nextCompany(ns)
+    const company = nextCompanies(ns)[0]
     const position = getCompanyPosition(ns, company)
     
     // work

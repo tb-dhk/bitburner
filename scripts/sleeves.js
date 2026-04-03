@@ -1,6 +1,6 @@
 import { nextFactions } from "./nextfaction"
 import { 
-  gym, maxCombat, crimeForMoney, nextCompany, 
+  gym, maxCombat, crimeForMoney, nextCompanies, 
   businessPositions, softwarePositions, getCompanyPosition 
 } from "./common.js"
 
@@ -18,11 +18,12 @@ export async function main(ns) {
       }
     }
     let factions = await nextFactions(ns)
+    let companies = nextCompanies(ns)
 
     for (let i = 0; i < sleeves - 1; i++) {
       const task = ns.sleeve.getTask(i)
 
-      const company = nextCompany(ns) 
+      const company = companies[0]
       const position = getCompanyPosition(ns, company)
       const money = ns.getServerMoneyAvailable("home")
       const random = Math.random()
@@ -58,6 +59,7 @@ export async function main(ns) {
           ns.sleeve.setToGymWorkout(i, "Powerhouse Gym", gym(ns))
         } else if (businessPositions.includes(position) || softwarePositions.includes(position)) {
           ns.sleeve.setToCompanyWork(i, company)
+          companies = companies.slice(1)
         } else if (!position.startsWith("Chief") && !position.endsWith("Officer")) {
           ns.sleeve.travel(i, "Volhaven")
           const skills = ns.getPlayer().skills

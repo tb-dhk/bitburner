@@ -34,7 +34,7 @@ export function minCombat(ns) {
   return Math.min(...physical.map(i => skills[i]))
 }
 
-export function nextCompany(ns) {
+export function nextCompanies(ns) {
   const factions = ns.getPlayer().factions
 
   const companies = [
@@ -65,13 +65,13 @@ export function nextCompany(ns) {
   if (filteredCompanies.length > 0) {
     // if there are still companies left with locked factions, work for the companies first
     // start from the company with the lowest rep
-    return filteredCompanies[0]
+    return filteredCompanies
   } else if (!companies.map(i => toString(ns.getPlayer().jobs[i])).some(i => i.startsWith("Chief") && i.endsWith("Officer"))) {
     // if there are no companies left with locked factions, work for the company with the highest rep
     // if there are ties, look for favor
-    return sortedCompanies[sortedCompanies.length - 1]
+    return [sortedCompanies[sortedCompanies.length - 1]]
   } else {
-    return ""
+    return []
   }
 }
 
