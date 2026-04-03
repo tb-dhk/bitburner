@@ -2,6 +2,7 @@ import { best } from './bestservers'
 
 /** @param {NS} ns */
 export async function main(ns) {
+  ns.ramOverride(6.70)
   let servers = ns.args
   if (!ns.args.length) {
     servers = best(ns).map(i => i[0]).filter(i => ns.getServerMaxMoney(i) && ns.hasRootAccess(i) && ns.getServerRequiredHackingLevel(i) <= ns.getHackingLevel())

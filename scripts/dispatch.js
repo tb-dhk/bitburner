@@ -5,12 +5,12 @@ function dispatchProgram(ns, program, threads, ...args) {
   const scriptRAM = ns.getScriptRam(program)
 
   // iterate through all servers
-  const servers = allServers(ns).filter(i => ns.hasRootAccess(i));
+  const servers = allServers(ns).slice(1).filter(i => ns.hasRootAccess(i));
   for (let server of servers) {
     // find how many threads the program can push
     const factor = server === "home" ? 0.1 : 1
-    const RAMLeft = (ns.getServerMaxRam(server) - ns.getServerUsedRam(server)) * factor
-    const serverThreads = Math.min(Math.floor(RAMLeft / scriptRAM), threads - count)
+    const ramLeft = (ns.getServerMaxRam(server) - ns.getServerUsedRam(server)) * factor
+    const serverThreads = Math.min(Math.floor(ramLeft / scriptRAM), threads - count)
 
     ns.scp(program, server)
 
@@ -26,8 +26,7 @@ function dispatchProgram(ns, program, threads, ...args) {
   return count
 }
 
-async function findMaxThreads(ns, RAMLeft, target) {
-  // works similar to batch.js version
+async function findMaxThreads(ns, ramLeft, target) {
   // solely based on ram left
   // only for hack and weaken
   const hackRAM = ns.getScriptRam("hack.js")
@@ -43,7 +42,7 @@ async function findMaxThreads(ns, RAMLeft, target) {
   let hackThreads = 0
   let weakenThreads = 0
 
-  if (RAMLeft < hackRAM + weakenRAM) {
+  if (ramLeft < hackRAM + weakenRAM) {
     return [0, 0]
   }
 
@@ -72,7 +71,7 @@ async function findMaxThreads(ns, RAMLeft, target) {
       return Math.max(Math.floor(hackThreads), 0)
     }
 
-    if (totalRAM > RAMLeft) {
+    if (totalRAM > ramLeft) {
       loss = Math.max(0, loss - 0.01)
       multiplier = Math.min(1 / (1 - loss), server.moneyMax)
       found = true
@@ -84,7 +83,10 @@ async function findMaxThreads(ns, RAMLeft, target) {
   }
 }
 
+/** @param {NS} ns */
 export async function main(ns) {
+  ns.ramOverride(10)
+  
   const target = ns.args[0]
 
   let server = ns.getServer(target)
@@ -126,11 +128,11 @@ export async function main(ns) {
 
     // within this, try to balance remaining RAM
     // between hack and weaken
-    let RAMLeft = 0
+    let ramLeft = 0
     for (let server of allServers(ns).slice(1)) {
-      RAMLeft += ns.getServerMaxRam(server) - ns.getServerUsedRam(server)
+      ramLeft += ns.getServerMaxRam(server) - ns.getServerUsedRam(server)
     }
-    const hackThreads = await findMaxThreads(ns, RAMLeft, target)
+    const hackThreads = await findMaxThreads(ns, ramLeft, target)
 
     // dispatch
     const realThreads = [
@@ -139,13 +141,10 @@ export async function main(ns) {
       dispatchProgram(ns, 'weaken.js', weaken2Threads, target, Math.max(0, weaken2Delay)),
       dispatchProgram(ns, 'hack.js', hackThreads, target, Math.max(0, hackDelay))
     ]
-    const plannedThreads = [weaken1Threads, growThreads, weaken2Threads, hackThreads]
 
     const totalThreads = realThreads.reduce((a, b) => a + b, 0)
-    const milliseconds = totalThreads ? weakenTime + delayBetween * 3 + 2000 : 60000
-    if (milliseconds >= 30000 || ns.getHackingLevel() < 1000) {
-      ns.tprint(`[${target}] `, `deployed threads ${[realThreads]} (planned ${plannedThreads}), sleeping `, Math.round(milliseconds / 1000), "s - new cycle at ", new Date(Date.now() + milliseconds).toLocaleString())
-    }
+    const milliseconds = totalThreads ? weakenTime + delayBetween * 3 + 2000 : 10000
+    
     await ns.sleep(milliseconds)
   }
 }

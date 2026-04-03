@@ -1,3 +1,5 @@
+import { gym } from "./common.js"
+
 const limits = {
   "Cloak": 25,
   "Short Circuit": 25,
@@ -8,15 +10,16 @@ const limits = {
   "Hyperdrive": 20
 }
 
-function gym(ns) {
-  const physical = ["strength", "defense", "dexterity", "agility"]
-  const skills = ns.getPlayer().skills
-  const level = physical.sort((a, b) => skills[a] - skills[b])[0]
-  ns.singularity.gymWorkout("Powerhouse Gym", level.slice(0, 3), false)
+function isNumeric(str) {
+  return !isNaN(parseFloat(str)) && isFinite(str)
 }
 
 /** @param {NS} ns */
 export async function main(ns) {
+  const sleeves = ns.sleeve.getNumSleeves()
+  const sleeveNo = Number(ns.args[0])
+  const validSleeve = !isNaN(sleeveNo) && sleeveNo < sleeves && sleeveNo >= 0
+
   ns.bladeburner.joinBladeburnerDivision()
   if (ns.bladeburner.inBladeburner()) {
     ns.bladeburner.joinBladeburnerFaction()
@@ -31,20 +34,15 @@ export async function main(ns) {
       continue
     }
 
-    const recruitmentViable = ns.bladeburner.getActionEstimatedSuccessChance("General", "Recruitment") === 1
+    const recruitmentViable = ns.bladeburner.getActionEstimatedSuccessChance("General", "Recruitment", sleeveNo) === 1
     let generalAction = recruitmentViable ? "Recruitment" : "Training"
     let action = ["General", generalAction]
   
-    const stamina = ns.bladeburner.getStamina()
-    if (stamina[0] < stamina[1] - 5) {
-      action = ["General", "Hyperbolic Regeneration Chamber"]
-    }
-
     let chance = [0, 0]
 
     const ls = [0, 2, 1]
     for (let i = 0; i < 3; i++) {
-      chance = ns.bladeburner.getActionEstimatedSuccessChance("Contracts", contracts[ls[i]])
+      chance = ns.bladeburner.getActionEstimatedSuccessChance("Contracts", contracts[ls[i]], sleeveNo)
       if (chance[1] === 1 && ns.bladeburner.getActionCountRemaining("Contracts", contracts[ls[i]]) >= 1) {
         action = ["Contracts", contracts[ls[i]]]
       }
@@ -52,7 +50,7 @@ export async function main(ns) {
 
     for (let i = 0; i < 2; i++) {
       ns.bladeburner.setTeamSize("Operations", operations[i], ns.bladeburner.getTeamSize())
-      chance = ns.bladeburner.getActionEstimatedSuccessChance("Operations", operations[i])
+      chance = ns.bladeburner.getActionEstimatedSuccessChance("Operations", operations[i], sleeveNo)
       if (chance[1] === 1 && ns.bladeburner.getActionCountRemaining("Operations", operations[i]) >= 1) {
         action = ["Operations", operations[i]]
       }
@@ -61,7 +59,7 @@ export async function main(ns) {
     const nextBlackOp = ns.bladeburner.getNextBlackOp()
     if (nextBlackOp) {
       ns.bladeburner.setTeamSize("Black Operations", nextBlackOp.name, ns.bladeburner.getTeamSize())
-      chance = ns.bladeburner.getActionEstimatedSuccessChance("Black Operations", nextBlackOp.name)
+      chance = ns.bladeburner.getActionEstimatedSuccessChance("Black Operations", nextBlackOp.name, sleeveNo)
       if (nextBlackOp.rank <= ns.bladeburner.getRank() && chance[1] >= 0.5) {
         action = ["Black Operations", nextBlackOp.name]
       }
@@ -77,14 +75,47 @@ export async function main(ns) {
       action = ["General", "Diplomacy"]
     }
 
+    const stamina = ns.bladeburner.getStamina()
+    if (stamina[0] < stamina[1] - 5) {
+      action = ["General", "Hyperbolic Regeneration Chamber"]
+    }
+    if (validSleeve) {
+      const sleeve = ns.sleeve.getSleeve(sleeveNo)
+      if (sleeve.shock) {
+        ns.sleeve.setToShockRecovery(sleeveNo)
+        action = ["Sleeve", "Shock Recovery"]
+      } else if (sleeve.sync < 100) {
+        ns.sleeve.setToSynchronize(sleeveNo)
+        action = ["Sleeve", "Synchronize"]
+      }
+    }
+            
     const current = ns.bladeburner.getCurrentAction()
-    if (current && current.name === action[1] && current.type === action[0]) {
-      ns.tprint("continuing ", action.join(": "))
+    const focus = ns.singularity.isFocused()
+    if (current && current.type === action[0] && current.name === action[1] || action[0] === "Sleeve") {
+      
     } else if (action[0] === "General" && action[1] === "Training") { 
-      gym(ns)
+      if (validSleeve) {
+        ns.sleeve.travel(sleeveNo, "Sector-12")
+        ns.sleeve.setToGymWorkout(sleeveNo, "Powerhouse Gym", gym(ns))
+      } else {
+        ns.singularity.gymWorkout("Powerhouse Gym", gym(ns), focus)
+      }
     } else {
-      ns.bladeburner.startAction(...action)
-      ns.tprint("starting ", action.join(": "))
+      if (validSleeve) {
+        switch (action[0]) {
+          case "General":
+            ns.sleeve.setToBladeburnerAction(sleeveNo, action[1])
+            break
+          case "Contracts":
+          case "Operations":
+          case "Black Operations":
+            ns.sleeve.setToBladeburnerAction(sleeveNo, "Take on contracts", action[1])
+            break
+        } 
+      } else {
+        ns.bladeburner.startAction(...action)
+      }
     }
 
     let min = 0
@@ -108,7 +139,12 @@ export async function main(ns) {
     }
 
     const factor = ns.bladeburner.getBonusTime() > 10000 ? 0.2 : 1
-    const duration = ns.bladeburner.getActionTime(...action) - ns.bladeburner.getActionCurrentTime()
+    let duration = 0
+    if (action[0] === "Sleeve") {
+      duration = 1000
+    } else {
+      duration = ns.bladeburner.getActionTime(...action) - ns.bladeburner.getActionCurrentTime()
+    }
     await ns.sleep(duration * factor + 500)
   }
 }

@@ -1,36 +1,83 @@
-import nextFaction from "./nextfaction"
+import { nextFactions } from "./nextfaction"
+import { 
+  gym, maxCombat, crimeForMoney, nextCompany, 
+  businessPositions, softwarePositions, getCompanyPosition 
+} from "./common.js"
 
 /** @param {NS} ns */
 export async function main(ns) {
   while (true) {
     const sleeves = ns.sleeve.getNumSleeves()
 
-    // find skill to train
-    const physical = ["strength", "defense", "dexterity", "agility"]
-    const skills = ns.getPlayer().skills
-    const level = physical.sort((a, b) => skills[a] - skills[b])[0]
-    const skill = level.slice(0, 3)
+    // micromanage all sleeves except last one
+    // reset first to prevent conflicts
+    for (let i = 0; i < sleeves - 1; i++) {
+      const task = ns.sleeve.getTask(i)
+      if (!task || task.crimeType !== crimeForMoney(ns)) {
+        ns.sleeve.setToIdle(i)
+      }
+    }
+    let factions = await nextFactions(ns)
 
-    const faction = await nextFaction(ns)
+    for (let i = 0; i < sleeves - 1; i++) {
+      const task = ns.sleeve.getTask(i)
 
-    for (let i = 0; i < sleeves; i++) {
+      const company = nextCompany(ns) 
+      const position = getCompanyPosition(ns, company)
+      const money = ns.getServerMoneyAvailable("home")
+      const random = Math.random()
+
       const sleeve = ns.sleeve.getSleeve(i)
       if (sleeve.shock) {
         ns.sleeve.setToShockRecovery(i)
       } else if (sleeve.sync < 100) {
         ns.sleeve.setToSynchronize(i)
-      } else if (faction) {
-        for (let type of ["hacking", "field", "security"]) {
-          const tryHack = ns.sleeve.setToFactionWork(i, faction, type)
-          if (tryHack) {
+      } else if (
+        (maxCombat(ns) >= 100 &&
+          (ns.heart.break() > -90 || ns.getPlayer().numPeopleKilled < 30)) ||
+        (!factions.length && !position && random < 0.25)
+      ) {
+        if (!task || task.crimeType !== "Homicide") {
+          ns.sleeve.setToCommitCrime(i, "Homicide");
+        }
+      } else if (money < 0 && !position) {
+        if (!task || task.crimeType !== crimeForMoney(ns)) {
+          ns.sleeve.setToCommitCrime(i, crimeForMoney(ns));
+        }
+      } else if (factions.length) {
+        for (let type of ["hacking", "security", "field"]) {
+          const tryWork = ns.sleeve.setToFactionWork(i, factions[0], type)
+          if (tryWork) {
+            factions = factions.slice(1)
             break
           }
         }
-      } else if (ns.heart.break() > -90 || ns.getPlayer().numPeopleKilled < 30) {
-        ns.singularity.commitCrime("Homicide", false)
-      } else {
-        ns.sleeve.setToGymWorkout(i, "Powerhouse Gym", skill)
+      } else { 
+        if (random < 0.25 && !position && money >= 0) {
+          ns.sleeve.travel(i, "Sector-12")
+          ns.sleeve.setToGymWorkout(i, "Powerhouse Gym", gym(ns))
+        } else if (businessPositions.includes(position) || softwarePositions.includes(position)) {
+          ns.sleeve.setToCompanyWork(i, company)
+        } else if (!position.startsWith("Chief") && !position.endsWith("Officer")) {
+          ns.sleeve.travel(i, "Volhaven")
+          const skills = ns.getPlayer().skills
+          const course = skills.charisma < skills.hacking ? "Leadership" : "Algorithms"
+          ns.sleeve.setToUniversityCourse(i, "ZB Institute of Technology", course)
+        } else {
+          ns.sleeve.travel(i, "Sector-12")
+          ns.sleeve.setToGymWorkout(i, "Powerhouse Gym", gym(ns))
+        }
       }
+    }
+
+    // last sleeve does bladeburner
+    let bladeburnerScripts = ns.ps().filter(i => i.filename === "bladeburner.js")
+    if (bladeburnerScripts.some(i => (i.args.length !== 1 || i.args[0] !== sleeves - 1))) {
+      ns.run("killall.js", 1, "true", "bladeburner.js")
+    }
+    bladeburnerScripts = ns.ps().filter(i => i.filename === "bladeburner.js")
+    if (!bladeburnerScripts.length) {
+      ns.run("bladeburner.js", 1, sleeves - 1)
     }
 
     for (let i = 0; i < sleeves; i++) {
@@ -39,6 +86,6 @@ export async function main(ns) {
       }
     }
 
-    await ns.sleep(1000)
+    await ns.sleep(5000)
   }
 }

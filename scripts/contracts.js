@@ -2,7 +2,6 @@
 import { allServers } from './allservers.js';
 
 export async function main(ns) {
-  const delay = 60 * 1000; // 1 minute in ms
   const seenContracts = new Set();
 
   const servers = allServers(ns);

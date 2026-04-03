@@ -20,11 +20,9 @@ export async function main(ns) {
       if (hasHTTPWorm) ns.httpworm(server);
       if (hasSQLInject) ns.sqlinject(server);
 
-      try {
-        ns.nuke(server);
+      ns.nuke(server);
+      if (ns.hasRootAccess(server)) {
         ns.tprint(`nuked ${server}`);
-      } catch (e) {
-        ns.tprint(`failed to nuke ${server}`)
       }
     }
   }

@@ -35,7 +35,7 @@ export function best(ns) {
 
     const doubleThreads = ns.growthAnalyze(server, 2)
 
-    const score = maxMoney / maxTime / (doubleThreads + hackThreads);
+    const score = maxMoney ** 2 / maxTime / (doubleThreads + hackThreads);
 
     serverScores.push([server, [score, maxMoney, maxTime / 1000, doubleThreads, hackThreads]]);
   }

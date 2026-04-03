@@ -1,4 +1,4 @@
-export function findServer(ns, target, current = "home", visited = new Set(), path = []) {
+export default function findServer(ns, target, current = "home", visited = new Set(), path = []) {
   visited.add(current);
   path.push(current);
 
