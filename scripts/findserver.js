@@ -1,4 +1,10 @@
-export default function findServer(ns, target, current = "home", visited = new Set(), path = []) {
+export default function findServer(
+  ns,
+  target,
+  current = "home",
+  visited = new Set(),
+  path = [],
+) {
   visited.add(current);
   path.push(current);
 
@@ -16,8 +22,8 @@ export default function findServer(ns, target, current = "home", visited = new S
 }
 
 export async function main(ns) {
-  const list = findServer(ns, ns.args[0])
-  ns.tprint(list)
-  navigator.clipboard.writeText(list.map(i => `connect ${i}`).join("; ")) 
-  ns.tprint("copied to clipboard.")
+  const list = findServer(ns, ns.args[0]);
+  ns.tprint(list);
+  navigator.clipboard.writeText(list.map((i) => `connect ${i}`).join("; "));
+  ns.tprint("copied to clipboard.");
 }

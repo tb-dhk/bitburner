@@ -1,4 +1,4 @@
 /** @param {NS} ns */
 export async function main(ns) {
-  ns.tprint(ns.getPlayer().skills)
+  ns.tprint(ns.getPlayer().skills);
 }

@@ -1,5 +1,5 @@
 /** @param {NS} ns **/
-import { allServers } from './allservers.js';
+import { allServers } from "./allservers.js";
 
 export async function main(ns) {
   const seenContracts = new Set();
@@ -8,12 +8,14 @@ export async function main(ns) {
 
   for (const server of servers) {
     if (ns.hasRootAccess(server)) {
-      const contracts = ns.ls(server, '.cct');
+      const contracts = ns.ls(server, ".cct");
       for (const contract of contracts) {
         const id = `${server}:${contract}`;
         if (!seenContracts.has(id)) {
           seenContracts.add(id);
-          ns.tprint(`[${new Date().toLocaleTimeString()}] Contract found on ${server}: ${contract}`);
+          ns.tprint(
+            `[${new Date().toLocaleTimeString()}] Contract found on ${server}: ${contract}`,
+          );
         }
       }
     }

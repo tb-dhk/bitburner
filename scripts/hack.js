@@ -2,11 +2,16 @@
 export async function main(ns) {
   const delay = ns.args[1] || 0;
   if (delay) {
-    ns.print(`[${new Date().toISOString()}] `, "hack script called, waiting for ", delay, " ms")
-    await ns.sleep(delay)
-  }  
-  ns.print(`[${new Date().toISOString()}] `, "begin hack")
+    ns.print(
+      `[${new Date().toISOString()}] `,
+      "hack script called, waiting for ",
+      delay,
+      " ms",
+    );
+    await ns.sleep(delay);
+  }
+  ns.print(`[${new Date().toISOString()}] `, "begin hack");
   const target = ns.args[0];
   await ns.hack(target);
-  ns.print(`[${new Date().toISOString()}] `, "finish hack")  
+  ns.print(`[${new Date().toISOString()}] `, "finish hack");
 }
