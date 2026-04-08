@@ -2,6 +2,9 @@ import findServer from "./findserver";
 import { nfgLevel, nextAugs, nextFactions, untouchedAugs } from "./nextfaction";
 import {
   gym,
+  cities,
+  cityGroups,
+  bladeburnerLimits,
   minCombat,
   crimeForMoney,
   nextCompanies,
@@ -9,13 +12,7 @@ import {
   softwarePositions,
   getCompanyPosition,
 } from "./common";
-
-// constants
-const cityGroups = [
-  ["Sector-12", "Aevum"],
-  ["Chongqing", "Ishima", "New Tokyo"],
-  ["Volhaven"],
-];
+import { getAction } from "./bladeburner"
 
 // helpers
 function findProcess(ns, filename) {
@@ -38,7 +35,6 @@ function nextBitNode(ns) {
 
 /** @param {NS} ns */
 export async function main(ns) {
-  ns.ramOverride(82.95);
   let count = 0;
 
   while (true) {
@@ -49,7 +45,6 @@ export async function main(ns) {
       }
     }
 
-    const cities = cityGroups.flat();
     if (count % 60 <= 6) {
       ns.singularity.travelToCity(cities[count % 6]);
     }
@@ -81,46 +76,52 @@ export async function main(ns) {
         ns.singularity.commitCrime(crimeForMoney(ns), focus);
       }
     } else if (faction) {
-      for (let type of ["hacking", "security", "field"]) {
-        const tryWork = ns.singularity.workForFaction(faction, type, focus);
-        if (tryWork) {
-          break;
-        }
-      }
-    } else {
-      if (random < 0.5 && !position && money >= 0) {
-        ns.singularity.travelToCity("Sector-12");
-        ns.singularity.gymWorkout("Powerhouse Gym", gym(ns), focus);
-      } else if (
-        businessPositions.includes(position) ||
-        softwarePositions.includes(position)
-      ) {
-        // if employed in business or software, switch to highest possible business position
-        ns.singularity.applyToCompany(company, "Business");
-        ns.singularity.workForCompany(company, focus);
-      } else if (
-        !position.startsWith("Chief") &&
-        !position.endsWith("Officer")
-      ) {
-        // if not employed, get a software job first or study leadership
-        const apply = ns.singularity.applyToCompany(company, "Software");
-        if (apply) {
-          ns.singularity.workForCompany(company, focus);
-        } else {
-          const skills = ns.getPlayer().skills;
-          const course =
-            skills.charisma < skills.hacking ? "Leadership" : "Algorithms";
-          ns.singularity.travelToCity("Volhaven");
-          ns.singularity.universityCourse(
-            "ZB Institute of Technology",
-            course,
-            focus,
-          );
+      if (faction === "Bladeburners") {
+        const current = ns.bladeburner.getCurrentAction()
+        const action = getAction(ns)
+        if (!current || !Object.keys(current).length || current.type !== action[0] || current.name !== action[1]) {
+          ns.bladeburner.startAction(...action)
         }
       } else {
-        ns.singularity.travelToCity("Sector-12");
-        ns.singularity.gymWorkout("Powerhouse Gym", gym(ns), focus);
+        for (let type of ["hacking", "security", "field"]) {
+          const tryWork = ns.singularity.workForFaction(faction, type, focus);
+          if (tryWork) {
+            break;
+          }
+        }
       }
+    } else if (random < 0.5 && !position && money >= 0) {
+      ns.singularity.travelToCity("Sector-12");
+      ns.singularity.gymWorkout("Powerhouse Gym", gym(ns), focus);
+    } else if (
+      businessPositions.includes(position) ||
+      softwarePositions.includes(position)
+    ) {
+      // if employed in business or software, switch to highest possible business position
+      ns.singularity.applyToCompany(company, "Business");
+      ns.singularity.workForCompany(company, focus);
+    } else if (
+      !position.startsWith("Chief") &&
+      !position.endsWith("Officer")
+    ) {
+      // if not employed, get a software job first or study leadership
+      const apply = ns.singularity.applyToCompany(company, "Software");
+      if (apply) {
+        ns.singularity.workForCompany(company, focus);
+      } else {
+        const skills = ns.getPlayer().skills;
+        const course =
+          skills.charisma < skills.hacking ? "Leadership" : "Algorithms";
+        ns.singularity.travelToCity("Volhaven");
+        ns.singularity.universityCourse(
+          "ZB Institute of Technology",
+          course,
+          focus,
+        );
+      }
+    } else {
+      ns.singularity.travelToCity("Sector-12");
+      ns.singularity.gymWorkout("Powerhouse Gym", gym(ns), focus);
     }
 
     // upgrade servers and home ram
@@ -197,7 +198,7 @@ export async function main(ns) {
     }
 
     // fill remaining holes
-    if (count % 2) {
+    if (!(count % 10)) {
       ns.run("fillholes.js");
     }
     // only when count is odd, to leave gaps for dispatch scripts
@@ -213,10 +214,10 @@ export async function main(ns) {
           }
           try {
             await ns.singularity.installBackdoor();
-          } catch {}
-          ns.singularity.connect("home");
+          } catch {}          
         }
       }
+      ns.singularity.connect("home");
     }
 
     // choose what city factions to join this round
@@ -265,8 +266,8 @@ export async function main(ns) {
         );
         if (purchased) {
           ns.tprint("bought ", augmentation, " from ", faction);
+          break
         }
-        break;
       }
     }
 
@@ -285,6 +286,33 @@ export async function main(ns) {
       (untouchedAugs(ns) === 0 && totalAugmentations >= installedAugmentations)
     ) {
       ns.singularity.installAugmentations("index.js");
+    }
+
+    // bladeburner points
+    let min = 0;
+    while (ns.bladeburner.getSkillPoints() >= min) {
+      const skills = ns.bladeburner.getSkillNames();
+      const ls = [];
+
+      for (let skill of skills) {
+        const limit =
+          Object.keys(bladeburnerLimits).includes(skill) &&
+          bladeburnerLimits[skill] <= ns.bladeburner.getSkillLevel(skill);
+        if (
+          ns.bladeburner.getSkillPoints() >= min &&
+          ns.bladeburner.getSkillUpgradeCost(skill, 1) === min &&
+          !limit
+        ) {
+          ns.bladeburner.upgradeSkill(skill, 1);
+          ns.tprint("upgrading ", skill, " for ", min, " points");
+        }
+        if (!limit) {
+          ls.push(ns.bladeburner.getSkillUpgradeCost(skill, 1));
+        }
+      }
+
+      min = Math.min(...ls);
+      await ns.sleep(50);
     }
 
     // destroy w0r1d_d43m0n
@@ -307,6 +335,6 @@ export async function main(ns) {
     }
 
     count++;
-    await ns.sleep(10000);
+    await ns.sleep(1000);
   }
 }

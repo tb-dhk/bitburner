@@ -15,9 +15,34 @@ export const softwarePositions = [
   "Vice President of Technology",
 ];
 
+export const cityGroups = [
+  ["Sector-12", "Aevum"],
+  ["Chongqing", "Ishima", "New Tokyo"],
+  ["Volhaven"],
+];
+
+export const cities = cityGroups.flat()
+
+export const bladeburnerLimits = {
+  Cloak: 25,
+  "Short Circuit": 25,
+  Tracer: 10,
+  Datamancer: 0,
+  "Cybers Edge": 0,
+  "Hands Of Midas": 0,
+  Hyperdrive: 20,
+};
+
 export function gym(ns) {
   const physical = ["strength", "defense", "dexterity", "agility"];
   const skills = ns.getPlayer().skills;
+  const level = physical.sort((a, b) => skills[a] - skills[b])[0];
+  return level.slice(0, 3);
+}
+
+export function gymSleeve(ns, sleeve) {
+  const physical = ["strength", "defense", "dexterity", "agility"];
+  const skills = ns.sleeve.getSleeve(sleeve).skills;
   const level = physical.sort((a, b) => skills[a] - skills[b])[0];
   return level.slice(0, 3);
 }
@@ -41,7 +66,7 @@ export function nextCompanies(ns) {
     "ECorp",
     "MegaCorp",
     "KuaiGong International",
-    "Four Sigma",
+    // four sigma excluded because its faction does not offer any unique augmentations
     "NWO",
     "Blade Industries",
     "OmniTek Incorporated",
@@ -51,15 +76,12 @@ export function nextCompanies(ns) {
   ];
 
   const sortedCompanies = companies
-    .sort(
-      (a, b) =>
-        ns.singularity.getCompanyFavor(a) - ns.singularity.getCompanyFavor(b),
-    )
-    .sort(
-      (a, b) =>
-        ns.singularity.getCompanyRep(a) - ns.singularity.getCompanyRep(b),
-    );
-
+    .sort((a, b) => {
+      const repDiff = ns.singularity.getCompanyRep(a) - ns.singularity.getCompanyRep(b);
+      if (repDiff !== 0) return repDiff;
+      return ns.singularity.getCompanyFavor(a) - ns.singularity.getCompanyFavor(b);
+    })
+  
   const filteredCompanies = sortedCompanies.filter(
     (i) =>
       ns.singularity.getCompanyRep(i) < 4e5 &&
@@ -118,19 +140,24 @@ export function crimeForMoney(ns) {
   )[0];
 }
 
-export function printTable(ns, data) {
+export function printTable(ns, data, silent) {
+  let string = ""
   const counts = data[0].map((_, col) => {
     return Math.max(...data.map((row) => row[col].length));
   });
   const length = data[0]
     .map((cell, col) => cell.padEnd(counts[col]))
-    .join("     ").length;
-  ns.tprint("-".repeat(length));
+    .join("   ").length;
+  string += "-".repeat(length) + "\n"
   for (let row of data) {
     const rowString = row
       .map((cell, col) => cell.padEnd(counts[col]))
-      .join("     ");
-    ns.tprint(rowString);
+      .join("   ");
+    string += rowString + "\n"
   }
-  ns.tprint("-".repeat(length));
+  string += "-".repeat(length) + "\n"
+  if (silent) {
+    return string
+  }
+  ns.tprint(string)
 }

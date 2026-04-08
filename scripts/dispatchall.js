@@ -1,3 +1,4 @@
+
 import { best } from "./bestservers";
 
 /** @param {NS} ns */
@@ -13,7 +14,6 @@ export async function main(ns) {
           ns.hasRootAccess(i) &&
           ns.getServerRequiredHackingLevel(i) <= ns.getHackingLevel(),
       );
-    ns.tprint("dispatching ", servers.join(" "));
   }
 
   const runningScripts = ns.ps("home");
@@ -24,10 +24,13 @@ export async function main(ns) {
       .filter((arg) => arg !== undefined),
   );
 
-  for (let server of servers) {
-    if (!activeTargets.has(server)) {
-      ns.run("dispatch.js", 1, server);
-      await ns.sleep(100); // small delay to avoid race conditions
-    }
+  const filteredServers = servers.filter(i => !activeTargets.has(i))
+  if (filteredServers.length) {
+    ns.tprint("dispatching ", filteredServers.join(" "));
+  }
+
+  for (let server of filteredServers) {
+    ns.run("dispatch.js", 1, server);
+    await ns.sleep(100); // small delay to avoid race conditions
   }
 }
