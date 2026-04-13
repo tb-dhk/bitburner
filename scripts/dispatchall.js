@@ -1,4 +1,3 @@
-
 import { best } from "./bestservers";
 
 /** @param {NS} ns */
@@ -24,7 +23,7 @@ export async function main(ns) {
       .filter((arg) => arg !== undefined),
   );
 
-  const filteredServers = servers.filter(i => !activeTargets.has(i))
+  const filteredServers = servers.filter((i) => !activeTargets.has(i));
   if (filteredServers.length) {
     ns.tprint("dispatching ", filteredServers.join(" "));
   }
