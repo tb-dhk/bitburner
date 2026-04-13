@@ -96,17 +96,12 @@ export function nextCompanies(ns) {
     // if there are still companies left with locked factions, work for the companies first
     // start from the company with the lowest rep
     return filteredCompanies;
-  } else if (
-    !companies
-      .map((i) => toString(ns.getPlayer().jobs[i]))
-      .some((i) => i.startsWith("Chief") && i.endsWith("Officer"))
-  ) {
+  } else if (!ns.singularity.getOwnedAugmentations(true).includes("TITN-41 Gene-Modification Injection")) {
     // if there are no companies left with locked factions, work for the company with the highest rep
     // if there are ties, look for favor
     return [sortedCompanies[sortedCompanies.length - 1]];
-  } else {
-    return [];
   }
+  return []
 }
 
 export function getCompanyPosition(ns, company) {
@@ -141,17 +136,17 @@ export function crimeForMoney(ns) {
 }
 
 export function printTable(ns, data, silent) {
-  let string = ""
+  let string = "\n"
   const counts = data[0].map((_, col) => {
     return Math.max(...data.map((row) => row[col].length));
   });
   const length = data[0]
-    .map((cell, col) => cell.padEnd(counts[col]))
+    .map((cell, col) => String(cell).padEnd(counts[col]))
     .join("   ").length;
   string += "-".repeat(length) + "\n"
   for (let row of data) {
     const rowString = row
-      .map((cell, col) => cell.padEnd(counts[col]))
+      .map((cell, col) => String(cell).padEnd(counts[col]))
       .join("   ");
     string += rowString + "\n"
   }
@@ -160,4 +155,9 @@ export function printTable(ns, data, silent) {
     return string
   }
   ns.tprint(string)
+}
+
+export function study(ns) {
+  const skills = ns.getPlayer().skills;
+  return skills.charisma < skills.hacking ? "Leadership" : "Algorithms";
 }

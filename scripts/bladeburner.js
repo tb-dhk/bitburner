@@ -88,7 +88,7 @@ export function getAction(ns) {
     );
     if (
       nextBlackOp.rank <= ns.bladeburner.getRank() && 
-      nchance[1] >= 0.5
+      nchance[1] >= 0.75
     ) {
       action = ["Black Operations", nextBlackOp.name];
       chance = nchance;

@@ -200,7 +200,7 @@ export async function main(ns) {
     const totalThreads = realThreads.reduce((a, b) => a + b, 0);
     const milliseconds = totalThreads
       ? weakenTime + delayBetween * 3 + 2000
-      : 10000;
+      : 100;
 
     await ns.sleep(milliseconds);
   }

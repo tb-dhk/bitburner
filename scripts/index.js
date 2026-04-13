@@ -11,6 +11,7 @@ import {
   businessPositions,
   softwarePositions,
   getCompanyPosition,
+  study
 } from "./common";
 import { getAction } from "./bladeburner"
 
@@ -36,6 +37,7 @@ function nextBitNode(ns) {
 /** @param {NS} ns */
 export async function main(ns) {
   let count = 0;
+  const interval = 100
 
   while (true) {
     const toRun = ["sleeves.js"];
@@ -60,68 +62,66 @@ export async function main(ns) {
     const focus = ns.singularity.isFocused();
     const random = Math.random();
 
-    // commit crime if gym stats are high enough and crime stats are too low
-    // otherwise work for faction to gain rep
-    // otherwise gym or work (if you have yet to become ceo)
+    // if you have insufficient crime stats and high enough combat, do crime
     if (
       (minCombat(ns) >= 100 &&
-        (ns.heart.break() > -90 || ns.getPlayer().numPeopleKilled < 30)) ||
-      (!faction && !position && random < 0.25)
+        (ns.heart.break() > -90 || ns.getPlayer().numPeopleKilled < 30))
     ) {
       if (!currentWork || currentWork.crimeType !== "Homicide") {
         ns.singularity.commitCrime("Homicide", focus);
       }
+    // if you're broke and can't get a job, do crime for money
     } else if (money < 0 && !position) {
       if (!currentWork || currentWork.crimeType !== crimeForMoney(ns)) {
         ns.singularity.commitCrime(crimeForMoney(ns), focus);
       }
+    // if your next task is to work on bladeburners, do bladeburner actions
+    } else if (faction === "Bladeburners") {
+      const current = ns.bladeburner.getCurrentAction()
+      const action = getAction(ns)
+      if (!current || !Object.keys(current).length || current.type !== action[0] || current.name !== action[1]) {
+        ns.bladeburner.startAction(...action)
+      }
+    // if your next task is to work on another faction, do that
     } else if (faction) {
-      if (faction === "Bladeburners") {
-        const current = ns.bladeburner.getCurrentAction()
-        const action = getAction(ns)
-        if (!current || !Object.keys(current).length || current.type !== action[0] || current.name !== action[1]) {
-          ns.bladeburner.startAction(...action)
-        }
-      } else {
-        for (let type of ["hacking", "security", "field"]) {
-          const tryWork = ns.singularity.workForFaction(faction, type, focus);
-          if (tryWork) {
-            break;
-          }
+      for (let type of ["hacking", "security", "field"]) {
+        const tryWork = ns.singularity.workForFaction(faction, type, focus);
+        if (tryWork) {
+          break;
         }
       }
-    } else if (random < 0.5 && !position && money >= 0) {
-      ns.singularity.travelToCity("Sector-12");
-      ns.singularity.gymWorkout("Powerhouse Gym", gym(ns), focus);
+    // if your next task is to work and you're employed and not an executive, work
     } else if (
       businessPositions.includes(position) ||
       softwarePositions.includes(position)
     ) {
-      // if employed in business or software, switch to highest possible business position
       ns.singularity.applyToCompany(company, "Business");
       ns.singularity.workForCompany(company, focus);
-    } else if (
-      !position.startsWith("Chief") &&
-      !position.endsWith("Officer")
-    ) {
-      // if not employed, get a software job first or study leadership
+    // if your next task is to work and you're not employed and not an executive,
+    // get a software job first or study
+    } else if (company && position !== "Chief Technology Officer") {
       const apply = ns.singularity.applyToCompany(company, "Software");
       if (apply) {
         ns.singularity.workForCompany(company, focus);
       } else {
-        const skills = ns.getPlayer().skills;
-        const course =
-          skills.charisma < skills.hacking ? "Leadership" : "Algorithms";
         ns.singularity.travelToCity("Volhaven");
         ns.singularity.universityCourse(
           "ZB Institute of Technology",
-          course,
+          study(ns),
           focus,
         );
       }
-    } else {
+    // otherwise, either gym or study
+    } else if (random < 0.5) {
       ns.singularity.travelToCity("Sector-12");
       ns.singularity.gymWorkout("Powerhouse Gym", gym(ns), focus);
+    } else {
+      ns.singularity.travelToCity("Volhaven");
+      ns.singularity.universityCourse(
+        "ZB Institute of Technology",
+        study(ns),
+        focus,
+      )
     }
 
     // upgrade servers and home ram
@@ -137,7 +137,7 @@ export async function main(ns) {
             2,
           );
           money -= baseCost;
-          ns.tprint(`bought pserv-${purchasedServers.length} for $${baseCost}`);
+          ns.tprint(`bought pserv-${purchasedServers.length} for $${baseCost.toExponential(3)}`);
           await ns.sleep(20);
           continue; // loop again to see if we can buy another
         } else {
@@ -156,7 +156,7 @@ export async function main(ns) {
           ns.cloud.upgradeServer(leastRAMServer, leastRAM * 2);
           money -= upgradeCost;
           ns.tprint(
-            `upgrading ${leastRAMServer} to ${leastRAM * 2}GB ($${upgradeCost})`,
+            `upgrading ${leastRAMServer} to ${leastRAM * 2}GB ($${upgradeCost.toExponential(3)})`,
           );
           await ns.sleep(20);
           continue;
@@ -198,14 +198,16 @@ export async function main(ns) {
     }
 
     // fill remaining holes
-    if (!(count % 10)) {
-      ns.run("fillholes.js");
+    const hackTime = Math.round(ns.getHackTime("joesguns") / interval)
+    if (!(count % (hackTime + 1))) {
+      ns.run("fillholes.js")
     }
+
     // only when count is odd, to leave gaps for dispatch scripts
 
     // nuke servers to unlock factions
     if (!(count % 60)) {
-      const servers = ["CSEC", "avmnite-02h", "I.I.I.I", "run4theh111z"];
+      const servers = ["CSEC", "avmnite-02h", "I.I.I.I", "run4theh111z", "fulcrumassets"];
       for (let server of servers) {
         if (!ns.getServer(server).backdoorInstalled) {
           const route = await findServer(ns, server);
@@ -214,7 +216,7 @@ export async function main(ns) {
           }
           try {
             await ns.singularity.installBackdoor();
-          } catch {}          
+          } catch {}
         }
       }
       ns.singularity.connect("home");
@@ -289,30 +291,32 @@ export async function main(ns) {
     }
 
     // bladeburner points
-    let min = 0;
-    while (ns.bladeburner.getSkillPoints() >= min) {
-      const skills = ns.bladeburner.getSkillNames();
-      const ls = [];
+    if (ns.bladeburner.inBladeburner()) {
+      let min = 0;
+      while (ns.bladeburner.getSkillPoints() >= min) {
+        const skills = ns.bladeburner.getSkillNames();
+        const ls = [];
 
-      for (let skill of skills) {
-        const limit =
-          Object.keys(bladeburnerLimits).includes(skill) &&
-          bladeburnerLimits[skill] <= ns.bladeburner.getSkillLevel(skill);
-        if (
-          ns.bladeburner.getSkillPoints() >= min &&
-          ns.bladeburner.getSkillUpgradeCost(skill, 1) === min &&
-          !limit
-        ) {
-          ns.bladeburner.upgradeSkill(skill, 1);
-          ns.tprint("upgrading ", skill, " for ", min, " points");
+        for (let skill of skills) {
+          const limit =
+            Object.keys(bladeburnerLimits).includes(skill) &&
+            bladeburnerLimits[skill] <= ns.bladeburner.getSkillLevel(skill);
+          if (
+            ns.bladeburner.getSkillPoints() >= min &&
+            ns.bladeburner.getSkillUpgradeCost(skill, 1) === min &&
+            !limit
+          ) {
+            ns.bladeburner.upgradeSkill(skill, 1);
+            ns.tprint("upgrading ", skill, " for ", min, " points");
+          }
+          if (!limit) {
+            ls.push(ns.bladeburner.getSkillUpgradeCost(skill, 1));
+          }
         }
-        if (!limit) {
-          ls.push(ns.bladeburner.getSkillUpgradeCost(skill, 1));
-        }
+
+        min = Math.min(...ls);
+        await ns.sleep(50);
       }
-
-      min = Math.min(...ls);
-      await ns.sleep(50);
     }
 
     // destroy w0r1d_d43m0n
@@ -331,10 +335,10 @@ export async function main(ns) {
     }
 
     if (destroy) {
-      ns.singularity.destroyW0r1dD43m0n(nextBitNode(ns), "index.js");
+      // ns.singularity.destroyW0r1dD43m0n(nextBitNode(ns), "index.js");
     }
 
     count++;
-    await ns.sleep(1000);
+    await ns.sleep(interval);
   }
 }
