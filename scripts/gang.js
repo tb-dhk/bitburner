@@ -4,12 +4,63 @@ function multiplyMultValues(obj, k) {
     .reduce((acc, [, val]) => acc * val, 1);
 }
 
-function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+function compareStats(ns, stat, a, b) {
+  const statsA = ns.gang.getMemberInformation(a)
+  const statsB = ns.gang.getMemberInformation(b)
+  if (statsA[stat] !== statsB[stat]) {
+    return statsA[stat] - statsB[stat]
+  } 
+  return statsA[stat + "_exp"] - statsB[stat + "_exp"]
+}
+
+function minCombat(ns, member) {
+  const stats = ns.gang.getMemberInformation(member)
+  let min = (Infinity, Infinity)
+  const combat = ["agi", "def", "dex", "str"]
+  for (let skill of combat) {
+    if (stats[skill] < min[0] || (stats[skill] == min[0] && stats[skill + "_exp"] < min[1])) {
+      min = (stats[skill], stats[skill + "_exp"])
+    }
+  }
+  return min
+}
+
+function compareMinCombat(ns, a, b) {
+  const minA = minCombat(ns, a)
+  const minB = minCombat(ns, b)
+  if (minA[0] !== minB[0]) {
+    return minA[0] - minB[0]
+  }
+  return minA[1] - minB[1]
+}
+
+function totalRespectGain(ns, list, task) {
+  return list
+    .reduce(
+      (acc, member) => acc + ns.formulas.gang.respectGain(
+        ns.gang.getGangInformation(), 
+        ns.gang.getMemberInformation(member),
+        ns.gang.getTaskStats(task)
+      ), 
+      0
+    )
+}
+
+function totalWantedGain(ns, list, task) {
+  return list
+    .reduce(
+      (acc, member) => acc + ns.formulas.gang.wantedLevelGain(
+        ns.gang.getGangInformation(), 
+        ns.gang.getMemberInformation(member),
+        ns.gang.getTaskStats(task)
+      ), 
+      0
+    )
 }
 
 /** @param {NS} ns */
 export async function main(ns) {
+  let iterCount = 0
   const karma = ns.heart.break();
   if (karma > -54000) {
     ns.tprint("current karma is ", karma, ".");
@@ -40,13 +91,12 @@ export async function main(ns) {
     while (recruitable) {
       ns.gang.recruitMember(memberCount.toString());
       ns.tprint("recruited new member ", memberCount);
-      ns.gang.setMemberTask(memberCount.toString(), "Ethical Hacking");
       memberCount += 1;
-      await ns.sleep(1000);
+      await ns.sleep(100);
       recruitable = ns.gang.canRecruitMember();
     }
 
-    const otherGangs = ns.gang.getOtherGangInformation();
+    const otherGangs = ns.gang.getAllGangInformation();
     let chance = 0;
     let count = 0;
     const name = ns.gang.getGangInformation().faction;
@@ -57,71 +107,65 @@ export async function main(ns) {
       }
     }
     chance /= count;
-    ns.tprint("overall win chance: ", chance * 100, "%");
-    const warfare = (chance >= 0.7 || members.length >= 10) && count;
-    ns.gang.setTerritoryWarfare(chance >= 0.7);
+    if (!(iterCount % 200)) {
+      ns.tprint("overall win chance: ", chance * 100, "%");
+    }
+    const warfare = (chance >= 0.75 || members.length === 12) && count;
+    ns.gang.setTerritoryWarfare(chance >= 0.75);
 
-    let minHacking = null;
-    let minHackingName = "";
-    let minCombat = null;
-    let minCombatName = "";
+    // sort by worst hackers, worst combat
+    const worstHackers = members.sort((a, b) => compareStats(ns, "hack", a, b))
+    const worstCombat = members.sort((a, b) => compareMinCombat(ns, a, b))
+    // init list of unassigned and wanted loss from vigilante justice
+    const unassigned = []
+    let wantedGain = 0
+    // find out how much is top 20%
+    const twenty = Math.ceil(members.length / 5)
     for (let member of members) {
-      ns.gang.setMemberTask(
-        member,
-        warfare && Math.random() < 2 / 3
-          ? "Territory Warfare"
-          : pickRandom(ns.args),
-      );
-      const memberObj = ns.gang.getMemberInformation(member);
-      if (memberObj.hack < minHacking || !minHackingName) {
-        minHacking = memberObj.hack;
-        minHackingName = memberObj.name;
+      // if in top 20% best combat and not warfare mode, assign to vigilante justice (add to wanted loss)
+      if (worstCombat.slice(memberCount - twenty).includes(member) && !warfare) {
+        ns.gang.setMemberTask(member, "Vigilante Justice")
+        wantedGain += ns.formulas.gang.wantedLevelGain(
+          ns.gang.getGangInformation(), 
+          ns.gang.getMemberInformation(member),
+          ns.gang.getTaskStats("Vigilante Justice")
+        )
       }
-      if (
-        (memberObj.str < minCombat || !minCombatName) &&
-        memberObj.name !== minHackingName
-      ) {
-        minCombat = memberObj.str;
-        minCombatName = memberObj.name;
+      // elif in top 20% worst hackers, assign to train hacking
+      else if (worstHackers.slice(0, twenty).includes(member)) {
+        ns.gang.setMemberTask(member, "Train Hacking")
+      }
+      // elif in top 20% worst combat, assign to train combat
+      else if (worstCombat.slice(0, twenty).includes(member)) {
+        ns.gang.setMemberTask(member, "Train Hacking")
+      }
+      // else add to list of unassigned
+      else {
+        unassigned.push(member)
       }
     }
 
-    // helper to pick a random unallocated member and mark them as allocated
-    const allocated = Array(members.length).fill(false);
-    function pickRandomUnallocated() {
-      const unallocated = members.filter((_, idx) => !allocated[idx]);
-      const choice =
-        unallocated[Math.floor(Math.random() * unallocated.length)];
-      allocated[Number(choice)] = true;
-      return choice || Math.floor(Math.random() * members.length);
-    }
-
+    let unassignedTask = ""
+    // if warfare mode, assign to warfare
     if (warfare) {
-      allocated[Number(minCombatName)] = true;
-      ns.gang.setMemberTask(members[minCombatName], "Train Combat");
-      ns.gang.setMemberTask(
-        members[Math.floor(Math.random() * members.length)],
-        pickRandom(ns.args),
-      );
+      unassignedTask = "Territory Warfare"
+    // if not warfare mode, check highest crime all unassigned can do at the same time without causing net wanted gain
     } else {
-      // allocateYou can also manage your gang programmatically through Netscript using the Gang API. minCombatName and minHackingName first
-      allocated[Number(minCombatName)] = true;
-      allocated[Number(minHackingName)] = true;
-
-      // assign tasks to random unallocated members
-      if (count) {
-        ns.gang.setMemberTask(members[Number(minCombatName)], "Train Combat");
+      const taskList = ns.gang.getTaskNames().sort((a, b) => totalRespectGain(ns, unassigned, b) - totalRespectGain(ns, unassigned, a))
+      for (let task of taskList) {
+        if (totalWantedGain(ns, unassigned, task) + wantedGain >= 0) {
+          unassignedTask = task
+          break
+        }
       }
-      ns.gang.setMemberTask(members[Number(minHackingName)], "Train Hacking");
     }
 
-    if (warfare) {
-      ns.gang.setMemberTask(
-        members[pickRandomUnallocated()],
-        "Territory Warfare",
-      );
+    for (let member of unassigned) {
+      ns.gang.setMemberTask(member, unassignedTask)
     }
-    ns.gang.setMemberTask(members[pickRandomUnallocated()], "Ethical Hacking");
-    await ns.sleep(20000);
+
+    await ns.sleep(100);
+
+    iterCount += 1
   }
 }

@@ -1,18 +1,17 @@
 import { allServers } from "./allservers";
+import { best } from "./bestservers";
 
 function dispatchProgram(ns, program, threads, ...args) {
   let count = 0;
   const scriptRAM = ns.getScriptRam(program);
+  const targetServers = best(ns)
 
   // iterate through all servers
   const servers = allServers(ns)
-    .slice(1)
     .filter((i) => ns.hasRootAccess(i));
   for (let server of servers) {
     // find how many threads the program can push
-    const factor = server === "home" ? 0.1 : 1;
-    const ramLeft =
-      (ns.getServerMaxRam(server) - ns.getServerUsedRam(server)) * factor;
+    const ramLeft = Math.max(ns.getServerMaxRam(server) - ns.getServerUsedRam(server) - (server === "home" ? 1000 : 0), 0)
     const serverThreads = Math.min(
       Math.floor(ramLeft / scriptRAM),
       threads - count,
@@ -99,7 +98,7 @@ async function findMaxThreads(ns, ramLeft, target) {
 
 /** @param {NS} ns */
 export async function main(ns) {
-  ns.ramOverride(10);
+  ns.ramOverride(10.15);
 
   const target = ns.args[0];
 

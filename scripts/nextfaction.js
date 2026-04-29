@@ -32,7 +32,7 @@ const allFactions = [
   "The Covenant",
   "Illuminati",
   "Daedalus",
-  "Bladeburners",
+  "Bladeburners"
 ];
 
 export function allAugmentations(ns) {
@@ -40,9 +40,9 @@ export function allAugmentations(ns) {
     ...new Set(
       allFactions
         .map((i) => ns.singularity.getAugmentationsFromFaction(i))
-        .flat(),
-    ),
-  ];
+        .flat()
+    )
+  ]
 }
 
 export function untouchedAugs(ns) {
@@ -67,44 +67,34 @@ function addAugmentationToList(ns, aug, list) {
     .getAugmentationPrereq(aug)
     .filter((i) => !ns.singularity.getOwnedAugmentations(true).includes(i))
     .sort((a, b) => {
-      const priceDiff =
-        ns.singularity.getAugmentationPrice(a) -
-        ns.singularity.getAugmentationPrice(b);
-      return priceDiff !== 0
-        ? priceDiff
-        : ns.singularity.getAugmentationRepReq(a) -
-            ns.singularity.getAugmentationRepReq(b);
-    });
+      const priceDiff = ns.singularity.getAugmentationPrice(a) - ns.singularity.getAugmentationPrice(b);
+      return priceDiff !== 0 ? priceDiff : ns.singularity.getAugmentationRepReq(a) - ns.singularity.getAugmentationRepReq(b);
+    })
   if (!list.includes(aug)) {
-    list = [aug, ...list.filter((i) => !preReqs.includes(i))];
+    list = [aug, ...list.filter(i => !preReqs.includes(i))]
   }
   for (let preReq of preReqs) {
-    list = addAugmentationToList(ns, preReq, list);
+    list = addAugmentationToList(ns, preReq, list)
   }
-  return list;
+  return list
 }
 
 function factionMaxRep(ns, faction, ignore = []) {
   const augsToIgnore = ignore
-    .map((i) => ns.singularity.getAugmentationsFromFaction(i))
-    .flat();
+    .map(i => ns.singularity.getAugmentationsFromFaction(i))
+    .flat()
   return Math.max(
-    ...ns.singularity
-      .getAugmentationsFromFaction(faction)
-      .filter((i) => !augsToIgnore.includes(i))
-      .map((j) => {
-        return ns.singularity.getAugmentationRepReq(j);
-      }),
-  );
+    ...ns.singularity.getAugmentationsFromFaction(faction)
+      .filter(i => !augsToIgnore.includes(i))
+      .map(j => {
+        return ns.singularity.getAugmentationRepReq(j)
+      })
+  )
 }
 
 /** @param {NS} ns */
 export async function nextAugs(ns, number) {
-  if (!untouchedAugs(ns).length) {
-    return ["NeuroFlux Governor"];
-  }
-
-  const factions = ns.getPlayer().factions;
+  const factions = ns.getPlayer().factions
 
   // find number of augmentations needed for next round
   // choose however many you need such that you buy 10 augs in total
@@ -130,54 +120,41 @@ export async function nextAugs(ns, number) {
   // subtracting required nfg so we reserve that number of slots for it
   const sortedAugmentations = [
     ...new Set(
-      allAugmentations(ns).sort((a, b) => {
-        const priceDiff =
-          ns.singularity.getAugmentationPrice(b) -
-          ns.singularity.getAugmentationPrice(a);
-        return priceDiff !== 0
-          ? priceDiff
-          : ns.singularity.getAugmentationRepReq(b) -
-              ns.singularity.getAugmentationRepReq(a);
-      }),
+      allAugmentations(ns)
+        .sort((a, b) => {
+          const priceDiff = ns.singularity.getAugmentationPrice(b) - ns.singularity.getAugmentationPrice(a);
+          return priceDiff !== 0 ? priceDiff : ns.singularity.getAugmentationRepReq(b) - ns.singularity.getAugmentationRepReq(a);
+        })
     ),
   ]
-    .filter((i) =>
-      factions.some((j) =>
-        ns.singularity.getAugmentationFactions(i).includes(j),
-      ),
-    )
+    .filter((i) => factions.some(j => ns.singularity.getAugmentationFactions(i).includes(j)))
     .filter((i) => !ns.singularity.getOwnedAugmentations(true).includes(i))
-    .filter((i) => i !== "NeuroFlux Governor");
-
-  const augsToBuy = number
-    ? Math.min(sortedAugmentations.length, number)
-    : requiredNumAugs - requiredNFG;
-  const remainder = Math.max(sortedAugmentations.length - augsToBuy, 0);
+    .filter((i) => i !== "NeuroFlux Governor")
+  
+  const augsToBuy = number ? Math.min(sortedAugmentations.length, number) : requiredNumAugs - requiredNFG;
+  const remainder = Math.max(sortedAugmentations.length - augsToBuy, 0)
 
   // get the back of sortedAugmentations (the cheapest)
   // iterate from cheapest
   // prereqs come before augmentations
   let reorderedAugmentations = [];
   for (let aug of sortedAugmentations.slice(remainder).toReversed()) {
-    reorderedAugmentations = addAugmentationToList(
-      ns,
-      aug,
-      reorderedAugmentations,
-    );
+    reorderedAugmentations = addAugmentationToList(ns, aug, reorderedAugmentations)
     if (reorderedAugmentations.length >= augsToBuy) {
-      break;
+      break
     }
   }
 
-  reorderedAugmentations = [
-    ...reorderedAugmentations.slice(0, augsToBuy),
-    ...Array(Math.max(0, requiredNFG)).fill("NeuroFlux Governor"),
-  ];
+  reorderedAugmentations = reorderedAugmentations.slice(0, augsToBuy)
+  while (reorderedAugmentations.length < requiredNumAugs) {
+    reorderedAugmentations.push("NeuroFlux Governor")
+  }
+
   return reorderedAugmentations;
 }
 
 /** @param {NS} ns */
-export async function nextFactions(ns, number) {
+export async function nextFactions(ns, number, filtered=true) {
   const factions = ns.getPlayer().factions;
 
   if (!untouchedAugs(ns).length) {
@@ -190,52 +167,47 @@ export async function nextFactions(ns, number) {
   }
 
   // get list of remaining augs
-  const remainingAugs = (await nextAugs(ns, number)).sort(
-    (a, b) =>
-      ns.singularity.getAugmentationRepReq(b) -
-      ns.singularity.getAugmentationRepReq(a),
-  );
+  let remainingAugs = (await nextAugs(ns, number))
+    .sort((a, b) => ns.singularity.getAugmentationRepReq(b) - ns.singularity.getAugmentationRepReq(a))
+
+  if (filtered) {
+    remainingAugs = remainingAugs.filter(i => !ns.singularity.getAugmentationFactions(i).some(j => ns.singularity.getFactionRep(j) >= ns.singularity.getAugmentationRepReq(i)))
+  }
+
   // do not filter for the sake of grinding rep for more favor after installation
 
   // find number of factions needed and corresponding rep needed
   // try to stick to as few as possible
-  let factionList = [];
+  let factionList = []
   for (let aug of remainingAugs) {
     const newFaction = factions
-      .filter((i) => ns.singularity.getAugmentationFactions(aug).includes(i))
-      .sort(
-        (a, b) =>
-          factionMaxRep(ns, b, factionList) - factionMaxRep(ns, a, factionList),
-      )[0];
+      .filter(i => ns.singularity.getAugmentationFactions(aug).includes(i))
+      .sort((a, b) => factionMaxRep(ns, b, factionList) - factionMaxRep(ns, a, factionList))
+    [0]
     if (newFaction && !factionList.includes(newFaction)) {
-      factionList.push(newFaction);
+      factionList.push(newFaction)
     }
   }
 
+  if (filtered) {
+    factionList = factionList
+      .filter(i => ns.singularity.getFactionRep(i) < Math.max(
+        ...remainingAugs
+          .filter(j => ns.singularity.getAugmentationsFromFaction(i).includes(j))
+          .map(j => ns.singularity.getAugmentationRepReq(j))
+      ))
+  }
+
   factionList = factionList
-    .filter(
-      (i) =>
-        ns.singularity.getFactionRep(i) <
-        Math.max(
-          ...remainingAugs
-            .filter((j) =>
-              ns.singularity.getAugmentationsFromFaction(i).includes(j),
-            )
-            .map((j) => ns.singularity.getAugmentationRepReq(j)),
-        ),
-    )
-    .sort(
-      (a, b) =>
-        factionMaxRep(ns, b, factionList) - factionMaxRep(ns, a, factionList),
-    );
+    .sort((a, b) => factionMaxRep(ns, b, factionList) - factionMaxRep(ns, a, factionList))
 
   return factionList;
 }
 
 /** @param {NS} ns */
 export async function main(ns) {
-  let string = "\n";
-  const number = Number(ns.args[0]);
+  let string = "\n"
+  const number = Number(ns.args[0])
   const totalAugmentations =
     ns.singularity.getOwnedAugmentations(true).length + nfgLevel(ns, false) - 1;
   const installedAugmentations =
@@ -245,17 +217,15 @@ export async function main(ns) {
   const requiredTotalNFG = Math.ceil(
     (Math.ceil((installedAugmentations + 5) / 10) * 10) / 5,
   );
-  const nextFacs = await nextFactions(ns, number);
-  string += `current augs: ${installedAugmentations} (${totalAugmentations}, goal ${Math.ceil((installedAugmentations + 5) / 10) * 10})\n`;
-  string += `current nfgs: ${await nfgLevel(ns, false)} (${await nfgLevel(ns, true)}, goal ${requiredTotalNFG})\n`;
+  const nextFacs = await nextFactions(ns, number)
+  string += `current augs: ${installedAugmentations} (${totalAugmentations}, goal ${Math.ceil((installedAugmentations + 5) / 10) * 10})\n`
+  string += `current nfgs: ${await nfgLevel(ns, false)} (${await nfgLevel(ns, true)}, goal ${requiredTotalNFG})\n`
   const purchasedAugs = ns.singularity
     .getOwnedAugmentations(true)
     .filter((i) => !ns.singularity.getOwnedAugmentations(false).includes(i));
-  const augs = (await nextAugs(ns, number)).filter(
-    (i) => i !== "NeuroFlux Governor",
-  );
+  const augs = await nextAugs(ns, number);
 
-  string += "\npending augmentations: ";
+  string += "\npending augmentations: "
   const table = [
     [
       "number",
@@ -270,27 +240,28 @@ export async function main(ns) {
   ];
   let count = 0;
   let sum = 0;
-  const factions = [];
+  let nfgCount = 0
+  const factions = []
 
   for (let aug of augs) {
-    const augFactions = ns
-      .getPlayer()
-      .factions.filter((i) =>
-        ns.singularity.getAugmentationsFromFaction(i).includes(aug),
-      );
     const money = ns.getServerMoneyAvailable("home");
     const augPrice = ns.singularity.getAugmentationPrice(aug) * 1.9 ** count;
-    const maxRep = Math.max(
-      ...augFactions.map((i) => ns.singularity.getFactionRep(i)),
-    );
-    const augFaction = augFactions.sort(
-      (a, b) => nextFacs.indexOf(a) - nextFacs.indexOf(b),
-    )[0];
-    const repReq = ns.singularity.getAugmentationRepReq(aug);
+    const augFaction = (await nextFactions(ns, number, false))
+      .filter((i) =>
+        ns.singularity.getAugmentationsFromFaction(i).includes(aug),
+      )
+      [0]
+    const maxRep = ns.singularity.getFactionRep(augFaction)
+    let repReq = ns.singularity.getAugmentationRepReq(aug)
+    if (aug == "NeuroFlux Governor") {
+      repReq *= 1.14 ** nfgCount
+      nfgCount += 1
+    }
+
     table.push([
       (count + 1).toString(),
       aug,
-      augFaction,
+      augFaction ? augFaction : "",
       purchasedAugs.includes(aug) ? "✓" : "✗",
       augPrice.toExponential(3),
       purchasedAugs.includes(aug) || money >= augPrice ? "✓" : "✗",
@@ -300,29 +271,35 @@ export async function main(ns) {
     count += 1;
     sum += augPrice;
     if (!factions.includes(augFaction)) {
-      factions.push(augFaction);
+      factions.push(augFaction)
     }
   }
   string += printTable(ns, table, true);
-  string += "estimated total cost: " + sum.toExponential(3) + "\n";
+  string += "estimated total cost: " + sum.toExponential(3) + "\n\n"
 
   const nextFaction = nextFacs[0];
   if (nextFaction) {
     const nextFactionAugs =
       ns.singularity.getAugmentationsFromFaction(nextFaction);
-    const repGoal = Math.max(
+    let repGoal = Math.max(
       ...augs
         .filter((i) => nextFactionAugs.includes(i))
         .map((i) => ns.singularity.getAugmentationRepReq(i)),
-    );
-    string += "next faction: " + nextFaction + "\n";
-    string +=
-      "reputation goal for this faction: " +
-      (augs.length ? repGoal.toExponential(3) : "none") +
-      "\n";
-    string += "number of remaining augmentations: " + untouchedAugs(ns).length;
+    )
+    repGoal *= 1.14 ** (nfgCount - 1)
+    repGoal = repGoal.toExponential(3)
+    const currentRep = ns.singularity.getFactionRep(nextFaction).toExponential(3)
+    const percentage = Math.round(currentRep / repGoal * 1000) / 10
+    string += "next faction: " + nextFaction + "\n"
+    string += `reputation goal for this faction: ${currentRep} / ${repGoal} (${percentage}%)\n`
   } else {
-    string += "factions have been exhausted for now.";
+    string += "you have no factions for now.\n"
   }
-  ns.tprint(string);
+
+  if (untouchedAugs(ns).length) {
+    string += "number of remaining augmentations: " + untouchedAugs(ns).length
+  } else {
+    string += "you have bought all augmentations."
+  }
+  ns.tprint(string)
 }

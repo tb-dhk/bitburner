@@ -16,12 +16,12 @@ export const softwarePositions = [
 ];
 
 export const cityGroups = [
-  ["Sector-12", "Aevum"],
   ["Chongqing", "Ishima", "New Tokyo"],
+  ["Sector-12", "Aevum"],
   ["Volhaven"],
 ];
 
-export const cities = cityGroups.flat();
+export const cities = cityGroups.flat()
 
 export const bladeburnerLimits = {
   Cloak: 25,
@@ -59,31 +59,29 @@ export function minCombat(ns) {
   return Math.min(...physical.map((i) => skills[i]));
 }
 
+export const companies = [
+  "ECorp",
+  "MegaCorp",
+  "KuaiGong International",
+  // four sigma excluded because its faction does not offer any unique augmentations
+  "NWO",
+  "Blade Industries",
+  "OmniTek Incorporated",
+  "Bachman & Associates",
+  "Clarke Incorporated",
+  "Fulcrum Technologies",
+];
+
 export function nextCompanies(ns) {
   const factions = ns.getPlayer().factions;
 
-  const companies = [
-    "ECorp",
-    "MegaCorp",
-    "KuaiGong International",
-    // four sigma excluded because its faction does not offer any unique augmentations
-    "NWO",
-    "Blade Industries",
-    "OmniTek Incorporated",
-    "Bachman & Associates",
-    "Clarke Incorporated",
-    "Fulcrum Technologies",
-  ];
-
-  const sortedCompanies = companies.sort((a, b) => {
-    const repDiff =
-      ns.singularity.getCompanyRep(a) - ns.singularity.getCompanyRep(b);
-    if (repDiff !== 0) return repDiff;
-    return (
-      ns.singularity.getCompanyFavor(a) - ns.singularity.getCompanyFavor(b)
-    );
-  });
-
+  const sortedCompanies = companies
+    .sort((a, b) => {
+      const repDiff = ns.singularity.getCompanyRep(a) - ns.singularity.getCompanyRep(b);
+      if (repDiff !== 0) return repDiff;
+      return ns.singularity.getCompanyFavor(a) - ns.singularity.getCompanyFavor(b);
+    })
+  
   const filteredCompanies = sortedCompanies.filter(
     (i) =>
       ns.singularity.getCompanyRep(i) < 4e5 &&
@@ -98,16 +96,12 @@ export function nextCompanies(ns) {
     // if there are still companies left with locked factions, work for the companies first
     // start from the company with the lowest rep
     return filteredCompanies;
-  } else if (
-    !ns.singularity
-      .getOwnedAugmentations(true)
-      .includes("TITN-41 Gene-Modification Injection")
-  ) {
+  } else if (!ns.singularity.getOwnedAugmentations(true).includes("TITN-41 Gene-Modification Injection")) {
     // if there are no companies left with locked factions, work for the company with the highest rep
     // if there are ties, look for favor
     return [sortedCompanies[sortedCompanies.length - 1]];
   }
-  return [];
+  return []
 }
 
 export function getCompanyPosition(ns, company) {
@@ -142,28 +136,43 @@ export function crimeForMoney(ns) {
 }
 
 export function printTable(ns, data, silent) {
-  let string = "\n";
+  let string = "\n"
   const counts = data[0].map((_, col) => {
     return Math.max(...data.map((row) => row[col].length));
   });
   const length = data[0]
     .map((cell, col) => String(cell).padEnd(counts[col]))
     .join("   ").length;
-  string += "-".repeat(length) + "\n";
+  string += "-".repeat(length) + "\n"
   for (let row of data) {
     const rowString = row
       .map((cell, col) => String(cell).padEnd(counts[col]))
       .join("   ");
-    string += rowString + "\n";
+    string += rowString + "\n"
   }
-  string += "-".repeat(length) + "\n";
+  string += "-".repeat(length) + "\n"
   if (silent) {
-    return string;
+    return string
   }
-  ns.tprint(string);
+  ns.tprint(string)
 }
 
 export function study(ns) {
   const skills = ns.getPlayer().skills;
   return skills.charisma < skills.hacking ? "Leadership" : "Algorithms";
+}
+
+export function needTor(ns) {
+  const purchased = ns.singularity.purchaseTor()
+  if (!purchased) {
+    return true
+  }
+  const scripts = ns.singularity.getDarkwebPrograms()
+  const files = ns.ls("home")
+  for (let script of scripts) {
+    if (!files.includes(script)) {
+      return true
+    }
+  }
+  return false
 }
