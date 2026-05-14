@@ -6,5 +6,6 @@ export async function main(ns) {
 
   for (let file of files) {
     ns.wget(path + file, file);
+    ns.tprint("[download] refreshed " + file)
   }
 }
