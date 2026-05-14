@@ -22,7 +22,7 @@ export async function main(ns) {
 
       ns.nuke(server);
       if (ns.hasRootAccess(server)) {
-        ns.tprint(`nuked ${server}`);
+        ns.tprint(`[unlock] nuked ${server}`);
       }
     }
   }

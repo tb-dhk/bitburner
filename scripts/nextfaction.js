@@ -100,12 +100,7 @@ function factionMaxRep(ns, faction, ignore = []) {
 
 /** @param {NS} ns */
 export async function nextAugs(ns, number) {
-  if (!untouchedAugs(ns).length) {
-    return ["NeuroFlux Governor"];
-  }
-
-  const factions = ns.getPlayer().factions
-    .filter(i => i !== ns.gang.getGangInformation().faction)
+  const factions = ns.getPlayer().factions;
 
   // find number of augmentations needed for next round
   // choose however many you need such that you buy 10 augs in total
@@ -170,15 +165,16 @@ export async function nextAugs(ns, number) {
     }
   }
 
-  reorderedAugmentations = [
-    ...reorderedAugmentations.slice(0, augsToBuy),
-    ...Array(Math.max(0, requiredNFG)).fill("NeuroFlux Governor"),
-  ];
+  reorderedAugmentations = reorderedAugmentations.slice(0, augsToBuy);
+  while (reorderedAugmentations.length < requiredNumAugs) {
+    reorderedAugmentations.push("NeuroFlux Governor");
+  }
+
   return reorderedAugmentations;
 }
 
 /** @param {NS} ns */
-export async function nextFactions(ns, number) {
+export async function nextFactions(ns, number, filtered = true) {
   const factions = ns.getPlayer().factions;
 
   if (!untouchedAugs(ns).length) {
@@ -191,12 +187,24 @@ export async function nextFactions(ns, number) {
   }
 
   // get list of remaining augs
-  const remainingAugs = (await nextAugs(ns, number)).sort(
+  let remainingAugs = (await nextAugs(ns, number)).sort(
     (a, b) =>
       ns.singularity.getAugmentationRepReq(b) -
       ns.singularity.getAugmentationRepReq(a),
   );
-  // do not filter for the sake of grinding rep for more favor after installation
+
+  if (filtered) {
+    remainingAugs = remainingAugs.filter(
+      (i) =>
+        !ns.singularity
+          .getAugmentationFactions(i)
+          .some(
+            (j) =>
+              ns.singularity.getFactionRep(j) >=
+              ns.singularity.getAugmentationRepReq(i),
+          ),
+    );
+  }
 
   // find number of factions needed and corresponding rep needed
   // try to stick to as few as possible
@@ -204,17 +212,27 @@ export async function nextFactions(ns, number) {
   for (let aug of remainingAugs) {
     const newFaction = factions
       .filter((i) => ns.singularity.getAugmentationFactions(aug).includes(i))
-      .sort(
-        (a, b) =>
-          factionMaxRep(ns, b, factionList) - factionMaxRep(ns, a, factionList),
-      )[0];
+      .sort((a, b) => {
+        if (
+          factionMaxRep(ns, b, factionList) !==
+          factionMaxRep(ns, a, factionList)
+        ) {
+          return (
+            factionMaxRep(ns, b, factionList) -
+            factionMaxRep(ns, a, factionList)
+          );
+        }
+        return (
+          ns.singularity.getFactionFavor(b) - ns.singularity.getFactionFavor(a)
+        );
+      })[0];
     if (newFaction && !factionList.includes(newFaction)) {
       factionList.push(newFaction);
     }
   }
 
-  factionList = factionList
-    .filter(
+  if (filtered) {
+    factionList = factionList.filter(
       (i) =>
         ns.singularity.getFactionRep(i) <
         Math.max(
@@ -224,11 +242,13 @@ export async function nextFactions(ns, number) {
             )
             .map((j) => ns.singularity.getAugmentationRepReq(j)),
         ),
-    )
-    .sort(
-      (a, b) =>
-        factionMaxRep(ns, b, factionList) - factionMaxRep(ns, a, factionList),
     );
+  }
+
+  factionList = factionList.sort(
+    (a, b) =>
+      factionMaxRep(ns, b, factionList) - factionMaxRep(ns, a, factionList),
+  );
 
   return factionList;
 }
@@ -246,15 +266,12 @@ export async function main(ns) {
   const requiredTotalNFG = Math.ceil(
     (Math.ceil((installedAugmentations + 5) / 10) * 10) / 5,
   );
-  const nextFacs = await nextFactions(ns, number);
   string += `current augs: ${installedAugmentations} (${totalAugmentations}, goal ${Math.ceil((installedAugmentations + 5) / 10) * 10})\n`;
   string += `current nfgs: ${await nfgLevel(ns, false)} (${await nfgLevel(ns, true)}, goal ${requiredTotalNFG})\n`;
   const purchasedAugs = ns.singularity
     .getOwnedAugmentations(true)
     .filter((i) => !ns.singularity.getOwnedAugmentations(false).includes(i));
-  const augs = (await nextAugs(ns, number)).filter(
-    (i) => i !== "NeuroFlux Governor",
-  );
+  const augs = await nextAugs(ns, number);
 
   string += "\npending augmentations: ";
   const table = [
@@ -264,6 +281,7 @@ export async function main(ns) {
       "factions",
       "bought?",
       "price (scaled)",
+      "price (cumulative)",
       "money?",
       "rep req",
       "reputation?",
@@ -271,59 +289,80 @@ export async function main(ns) {
   ];
   let count = 0;
   let sum = 0;
-  const factions = [];
+  let nfgCount = 0;
+  let totalPrice = 0;
+  const factions = {};
 
   for (let aug of augs) {
-    const augFactions = ns
-      .getPlayer()
-      .factions.filter((i) =>
-        ns.singularity.getAugmentationsFromFaction(i).includes(aug),
-      );
-    const money = ns.getServerMoneyAvailable("home");
+    const money = ns.getPlayer().money;
     const augPrice = ns.singularity.getAugmentationPrice(aug) * 1.9 ** count;
-    const maxRep = Math.max(
-      ...augFactions.map((i) => ns.singularity.getFactionRep(i)),
-    );
-    const augFaction = augFactions.sort(
-      (a, b) => nextFacs.indexOf(a) - nextFacs.indexOf(b),
+    totalPrice += augPrice;
+    const augFaction = (await nextFactions(ns, number, false)).filter((i) =>
+      ns.singularity.getAugmentationsFromFaction(i).includes(aug),
     )[0];
-    const repReq = ns.singularity.getAugmentationRepReq(aug);
+    const maxRep = ns.singularity.getFactionRep(augFaction);
+    let repReq = ns.singularity.getAugmentationRepReq(aug);
+    if (aug == "NeuroFlux Governor") {
+      repReq *= 1.14 ** nfgCount;
+      nfgCount += 1;
+    }
+    sum += augPrice;
+
     table.push([
       (count + 1).toString(),
       aug,
-      augFaction,
+      augFaction ? augFaction : "",
       purchasedAugs.includes(aug) ? "✓" : "✗",
       augPrice.toExponential(3),
-      purchasedAugs.includes(aug) || money >= augPrice ? "✓" : "✗",
+      sum.toExponential(3),
+      purchasedAugs.includes(aug) || money >= totalPrice ? "✓" : "✗",
       repReq.toExponential(3),
       maxRep >= repReq ? "✓" : "✗",
     ]);
     count += 1;
-    sum += augPrice;
-    if (!factions.includes(augFaction)) {
-      factions.push(augFaction);
-    }
+    factions[augFaction] = Math.max(factions[augFaction] ?? 0, repReq);
   }
   string += printTable(ns, table, true);
-  string += "estimated total cost: " + sum.toExponential(3) + "\n";
+  const money = ns.getPlayer().money;
+  string += `money: ${money.toExponential(3)} / ${sum.toExponential(3)} (${((money / sum) * 100).toPrecision(3)}%) \n\n`;
 
-  const nextFaction = nextFacs[0];
-  if (nextFaction) {
-    const nextFactionAugs =
-      ns.singularity.getAugmentationsFromFaction(nextFaction);
-    const repGoal = Math.max(
-      ...augs
-        .filter((i) => nextFactionAugs.includes(i))
-        .map((i) => ns.singularity.getAugmentationRepReq(i)),
+  if ((await nextFactions(ns)).length) {
+    string += "next faction: " + (await nextFactions(ns))[0];
+    const factionTable = [["faction", "current", "goal", "progress"]];
+    for (let faction in factions) {
+      const current = ns.singularity.getFactionRep(faction);
+      factionTable.push([
+        faction,
+        Math.min(current, factions[faction]).toExponential(3),
+        factions[faction].toExponential(3),
+        Math.min((current / factions[faction]) * 100, 100).toPrecision(3) + "%",
+      ]);
+    }
+    const totalCurrent = Object.keys(factions).reduce(
+      (acc, value) => acc + ns.singularity.getFactionRep(value),
+      0,
     );
-    string += "next faction: " + nextFaction + "\n";
-    string +=
-      "reputation goal for this faction: " +
-      (augs.length ? repGoal.toExponential(3) : "none") +
-      "\n";
+    const totalGoal = Object.values(factions).reduce(
+      (acc, value) => acc + value,
+      0,
+    );
+    factionTable.push([
+      "total",
+      Math.min(totalCurrent, totalGoal).toExponential(3),
+      totalGoal.toExponential(3),
+      Math.min((totalCurrent / totalGoal) * 100, 100).toPrecision(3) + "%",
+    ]);
+    string += printTable(ns, factionTable, true);
+  } else {
+    string += "you have no factions left to work for for now.";
+  }
+
+  string += "\n";
+
+  if (untouchedAugs(ns).length) {
     string += "number of remaining augmentations: " + untouchedAugs(ns).length;
   } else {
-    string += "factions have been exhausted for now.";
+    string += "you have bought all augmentations.";
   }
   ns.tprint(string);
 }

@@ -1,35 +1,35 @@
-import { cities } from "./common"
+import { cities } from "./common";
 
 function currentAction(ns, sleeveNo) {
   // get current task
   let current = ns.bladeburner.getCurrentAction();
-  const task = ns.sleeve.getTask(sleeveNo)
+  const task = ns.sleeve.getTask(sleeveNo);
   if (task) {
     current = {
       type: task.actionType,
-      name: task.actionName
-    }
+      name: task.actionName,
+    };
   } else {
-    current = {}
+    current = {};
   }
-  return current
+  return current;
 }
 
 export function getAction(ns) {
   const contracts = ns.bladeburner.getContractNames();
   const operations = ns.bladeburner.getOperationNames();
 
-  const current = ns.bladeburner.getCurrentAction()
+  const current = ns.bladeburner.getCurrentAction();
 
   if (!ns.bladeburner.inBladeburner()) {
-    return [] 
+    return [];
   }
 
   // recruit if possible
   const recruitmentViable =
     ns.bladeburner.getActionEstimatedSuccessChance(
       "General",
-      "Recruitment"
+      "Recruitment",
     )[0] === 1;
   let generalAction = recruitmentViable ? "Recruitment" : "Training";
   let action = ["General", generalAction];
@@ -41,9 +41,9 @@ export function getAction(ns) {
   for (let i = 0; i < 3; i++) {
     const nchance = ns.bladeburner.getActionEstimatedSuccessChance(
       "Contracts",
-      contracts[ls[i]]
+      contracts[ls[i]],
     );
-    const contractName = contracts[ls[i]]
+    const contractName = contracts[ls[i]];
     if (
       nchance[1] === 1 &&
       ns.bladeburner.getActionCountRemaining("Contracts", contracts[ls[i]]) > 0
@@ -62,9 +62,9 @@ export function getAction(ns) {
     );
     const nchance = ns.bladeburner.getActionEstimatedSuccessChance(
       "Operations",
-      operations[i]
+      operations[i],
     );
-    const operationName = operations[ls[i]]
+    const operationName = operations[ls[i]];
     if (
       nchance[1] === 1 &&
       ns.bladeburner.getActionCountRemaining("Operations", operations[i]) > 0
@@ -84,12 +84,9 @@ export function getAction(ns) {
     );
     const nchance = ns.bladeburner.getActionEstimatedSuccessChance(
       "Black Operations",
-      nextBlackOp.name
+      nextBlackOp.name,
     );
-    if (
-      nextBlackOp.rank <= ns.bladeburner.getRank() && 
-      nchance[1] >= 0.75
-    ) {
+    if (nextBlackOp.rank <= ns.bladeburner.getRank() && nchance[1] >= 0.75) {
       action = ["Black Operations", nextBlackOp.name];
       chance = nchance;
     }
@@ -105,17 +102,22 @@ export function getAction(ns) {
   const chaos = ns.bladeburner.getCityChaos(city);
   if (chaos >= 50) {
     const bestCity = cities.sort(
-      (a, b) => ns.bladeburner.getCityChaos(a) - ns.bladeburner.getCityChaos(b)
-    )[0]
-    ns.bladeburner.switchCity(bestCity)
+      (a, b) => ns.bladeburner.getCityChaos(a) - ns.bladeburner.getCityChaos(b),
+    )[0];
+    ns.bladeburner.switchCity(bestCity);
   } else if (chaos >= 40) {
-    action = ["General", "Diplomacy"]
+    action = ["General", "Diplomacy"];
   }
 
   const stamina = ns.bladeburner.getStamina();
-  if (stamina[0] < stamina[1] / 2 || (current && current[1] == "Hyperbolic Regeneration Chamber" && stamina[0] < stamina[1])) {
+  if (
+    stamina[0] < stamina[1] / 2 ||
+    (current &&
+      current[1] == "Hyperbolic Regeneration Chamber" &&
+      stamina[0] < stamina[1])
+  ) {
     action = ["General", "Hyperbolic Regeneration Chamber"];
   }
-  
-  return action
+
+  return action;
 }
