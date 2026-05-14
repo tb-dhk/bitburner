@@ -25,7 +25,7 @@ export async function main(ns) {
 
   const filteredServers = servers.filter((i) => !activeTargets.has(i));
   if (filteredServers.length) {
-    ns.tprintf("[dispatch] dispatching ", filteredServers.join(" "));
+    ns.tprintf("[dispatch] dispatching " + filteredServers.join(" "));
   }
 
   for (let server of filteredServers) {

@@ -116,7 +116,7 @@ export async function main(ns) {
           ns.getPlayer().money >=
           ns.sleeve.getSleeveAugmentationPrice(aug) * 1000
         ) {
-          ns.tprintf("[sleeves] buying ", aug, " for sleeve ", i);
+          ns.tprintf("[sleeves] buying " + aug + " for sleeve " + i);
           ns.sleeve.purchaseSleeveAug(i, aug);
         }
       }

@@ -62,7 +62,7 @@ export function best(ns) {
 
 export async function main(ns) {
   const list = best(ns);
-  ns.tprintf(list.length, " servers found");
+  ns.tprintf(`${list.length} servers found`);
   ns.tprintf([
     "name",
     [

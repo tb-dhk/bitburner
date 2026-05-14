@@ -141,7 +141,7 @@ export async function main(ns) {
         const threshold = 2;
         if (ascensionMult >= threshold) {
           ns.gang.ascendMember(member);
-          ns.tprintf("[gang] ascended ", member);
+          ns.tprintf("[gang] ascended " + member);
         }
       }
       if (member != memberCount) {
@@ -153,7 +153,7 @@ export async function main(ns) {
     let recruitable = ns.gang.canRecruitMember();
     while (recruitable) {
       ns.gang.recruitMember(memberCount.toString());
-      ns.tprintf("[gang] recruited new member ", memberCount);
+      ns.tprintf("[gang] recruited new member " + memberCount);
       memberCount += 1;
       await ns.sleep(100);
       recruitable = ns.gang.canRecruitMember();

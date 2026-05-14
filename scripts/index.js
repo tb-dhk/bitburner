@@ -316,7 +316,7 @@ export async function main(ns) {
     for (let invitation of invitations) {
       if (!ignore.includes(invitation)) {
         ns.singularity.joinFaction(invitation);
-        ns.tprintf("[factions] joined ", invitation);
+        ns.tprintf("[factions] joined " + invitation);
       }
     }
 
