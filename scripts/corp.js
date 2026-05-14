@@ -182,7 +182,7 @@ export async function main(ns) {
         );
       })[0];
       if (money >= ns.corporation.getUnlockCost(cheapestUnlock) * 10) {
-        ns.tprint(`[corp] buying unlock ${cheapestUnlock}`);
+        ns.tprintf(`[corp] buying unlock ${cheapestUnlock}`);
         ns.corporation.purchaseUnlock(cheapestUnlock);
       } else {
         break;
@@ -200,7 +200,7 @@ export async function main(ns) {
       )[0];
       if (money >= ns.corporation.getUpgradeLevelCost(cheapestUpgrade) * 10) {
         const level = ns.corporation.getUpgradeLevel(cheapestUpgrade);
-        ns.tprint(
+        ns.tprintf(
           `[corp] buying upgrade ${cheapestUpgrade} (level ${level + 1})`,
         );
         ns.corporation.levelUpgrade(cheapestUpgrade);
@@ -261,7 +261,7 @@ export async function main(ns) {
           points >=
           ns.corporation.getResearchCost(divisionName, cheapestUpgrade)
         ) {
-          ns.tprint(`[corp] ${divisionName}: researched ${cheapestUpgrade}`);
+          ns.tprintf(`[corp] ${divisionName}: researched ${cheapestUpgrade}`);
           ns.corporation.research(divisionName, cheapestUpgrade);
         } else {
           break;
@@ -273,7 +273,7 @@ export async function main(ns) {
         ns.corporation.getCorporation().funds >=
         ns.corporation.getHireAdVertCost(divisionName) * 10
       ) {
-        ns.tprint(`[corp] ${divisionName}: hired advert`);
+        ns.tprintf(`[corp] ${divisionName}: hired advert`);
         ns.corporation.hireAdVert(divisionName);
       }
 
@@ -322,7 +322,7 @@ export async function main(ns) {
             ns.corporation.getCorporation().funds >=
               ns.corporation.getUpgradeWarehouseCost(divisionName, city, 1) * 10
           ) {
-            ns.tprint(`[corp] ${divisionName} (${city}): upgraded warehouse`);
+            ns.tprintf(`[corp] ${divisionName} (${city}): upgraded warehouse`);
             ns.corporation.upgradeWarehouse(divisionName, city);
           }
 
@@ -506,7 +506,7 @@ export async function main(ns) {
                 10
           ) {
             ns.corporation.upgradeOfficeSize(divisionName, city, 1);
-            ns.tprint(
+            ns.tprintf(
               `[corp] ${divisionName} (${city}): upgraded office to ${office.size + 1} employees`,
             );
           }
@@ -545,7 +545,7 @@ export async function main(ns) {
                 (Math.sqrt(1 + 44000 / office.avgMorale) - 21) *
                 1.1;
               ns.corporation.throwParty(divisionName, city, costPerEmployee);
-              ns.tprint(
+              ns.tprintf(
                 `[corp] ${divisionName} (${city}): threw party for ${costPerEmployee * office.numEmployees}`,
               );
             }
@@ -554,13 +554,13 @@ export async function main(ns) {
               office.avgEnergy < 98
             ) {
               ns.corporation.buyTea(divisionName, city);
-              ns.tprint(`[corp] ${divisionName} (${city}): bought tea`);
+              ns.tprintf(`[corp] ${divisionName} (${city}): bought tea`);
             }
           }
         } else {
           try {
             ns.corporation.expandCity(divisionName, city);
-            ns.tprint(`[corp] ${divisionName} (${city}): expanded`);
+            ns.tprintf(`[corp] ${divisionName} (${city}): expanded`);
           } catch {}
         }
       }

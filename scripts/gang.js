@@ -102,7 +102,7 @@ export async function main(ns) {
     if (!created) {
       return;
     }
-    ns.tprint("[gang] gang created.");
+    ns.tprintf("[gang] gang created.");
   }
 
   while (true) {
@@ -119,7 +119,7 @@ export async function main(ns) {
     }
     chance /= remainingGangs;
     if (!(iterCount % 1000) && chance) {
-      ns.tprint(
+      ns.tprintf(
         "[gang] overall win chance: ",
         (chance * 100).toPrecision(3),
         "%",
@@ -141,7 +141,7 @@ export async function main(ns) {
         const threshold = 2;
         if (ascensionMult >= threshold) {
           ns.gang.ascendMember(member);
-          ns.tprint("[gang] ascended ", member);
+          ns.tprintf("[gang] ascended ", member);
         }
       }
       if (member != memberCount) {
@@ -153,7 +153,7 @@ export async function main(ns) {
     let recruitable = ns.gang.canRecruitMember();
     while (recruitable) {
       ns.gang.recruitMember(memberCount.toString());
-      ns.tprint("[gang] recruited new member ", memberCount);
+      ns.tprintf("[gang] recruited new member ", memberCount);
       memberCount += 1;
       await ns.sleep(100);
       recruitable = ns.gang.canRecruitMember();

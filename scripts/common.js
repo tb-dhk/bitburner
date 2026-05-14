@@ -162,7 +162,7 @@ export function printTable(ns, data, silent) {
   if (silent) {
     return string;
   }
-  ns.tprint(string);
+  ns.tprintf(string);
 }
 
 export function study(ns) {

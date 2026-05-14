@@ -23,7 +23,7 @@ export default function findServer(
 
 export async function main(ns) {
   const list = findServer(ns, ns.args[0]);
-  ns.tprint(list);
+  ns.tprintf(list);
   navigator.clipboard.writeText(list.map((i) => `connect ${i}`).join("; "));
-  ns.tprint("copied to clipboard.");
+  ns.tprintf("copied to clipboard.");
 }

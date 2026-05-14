@@ -11,7 +11,7 @@ export async function main(ns) {
     "score",
   ];
   const num = Number(ns.args[0]) || 6;
-  ns.tprint(header.join(" "));
+  ns.tprintf(header.join(" "));
   for (let location of locations) {
     const infiltrations = ns.infiltration.getInfiltration(location.name);
     if (infiltrations.difficulty < 3) {
@@ -30,7 +30,7 @@ export async function main(ns) {
   }
   list.sort((a, b) => b[num] - a[num]);
   for (let row of list) {
-    ns.tprint(row.join(" "));
+    ns.tprintf(row.join(" "));
   }
   navigator.clipboard.writeText(
     [header, ...list].map((row) => row.join(", ")).join("\n"),

@@ -13,7 +13,7 @@ export async function main(ns) {
         const id = `${server}:${contract}`;
         if (!seenContracts.has(id)) {
           seenContracts.add(id);
-          ns.tprint(
+          ns.tprintf(
             `[${new Date().toLocaleTimeString()}] Contract found on ${server}: ${contract}`,
           );
         }
@@ -22,6 +22,6 @@ export async function main(ns) {
   }
 
   if (!Array.from(seenContracts).length) {
-    ns.tprint(`[${new Date().toLocaleTimeString()}] no contracts found :(`);
+    ns.tprintf(`[${new Date().toLocaleTimeString()}] no contracts found :(`);
   }
 }

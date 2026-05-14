@@ -62,8 +62,8 @@ export function best(ns) {
 
 export async function main(ns) {
   const list = best(ns);
-  ns.tprint(list.length, " servers found");
-  ns.tprint([
+  ns.tprintf(list.length, " servers found");
+  ns.tprintf([
     "name",
     [
       "score",
@@ -75,9 +75,9 @@ export async function main(ns) {
     ],
   ]);
   for (let i of list) {
-    ns.tprint(i);
+    ns.tprintf(i);
   }
-  ns.tprint(
+  ns.tprintf(
     best(ns)
       .map((i) => i[0])
       .join(" "),

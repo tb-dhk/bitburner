@@ -14,9 +14,9 @@ export function next(ns) {
 
 export async function main(ns) {
   const list = next(ns);
-  ns.tprint(list.length, " servers");
-  ns.tprint(["name", "level"]);
+  ns.tprintf(list.length, " servers");
+  ns.tprintf(["name", "level"]);
   for (let i of list) {
-    ns.tprint(i);
+    ns.tprintf(i);
   }
 }

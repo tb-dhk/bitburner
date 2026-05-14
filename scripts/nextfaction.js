@@ -364,5 +364,5 @@ export async function main(ns) {
   } else {
     string += "you have bought all augmentations.";
   }
-  ns.tprint(string);
+  ns.tprintf(string);
 }

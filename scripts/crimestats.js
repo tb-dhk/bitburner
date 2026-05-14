@@ -1,5 +1,5 @@
 /** @param {NS} ns */
 export async function main(ns) {
-  ns.tprint(ns.heart.break(), " karma");
-  ns.tprint(ns.getPlayer().numPeopleKilled, " kills");
+  ns.tprintf(ns.heart.break(), " karma");
+  ns.tprintf(ns.getPlayer().numPeopleKilled, " kills");
 }

@@ -163,7 +163,7 @@ export async function main(ns) {
               2,
             );
             money -= baseCost;
-            ns.tprint(
+            ns.tprintf(
               `[servers] bought ${purchasedServers.length} for $${baseCost.toExponential(3)}`,
             );
             await ns.sleep(20);
@@ -183,7 +183,7 @@ export async function main(ns) {
           if (money > upgradeCost * 100) {
             ns.cloud.upgradeServer(leastRAMServer, leastRAM * 2);
             money -= upgradeCost;
-            ns.tprint(
+            ns.tprintf(
               `[servers] upgrading ${leastRAMServer} to ${leastRAM * 2}GB ($${upgradeCost.toExponential(3)})`,
             );
             sortedServers[0][1] *= 2;
@@ -202,7 +202,7 @@ export async function main(ns) {
       (homeRAMCost < 1e10 && money > homeRAMCost)
     ) {
       ns.singularity.upgradeHomeRam();
-      ns.tprint("[servers] upgrading home RAM");
+      ns.tprintf("[servers] upgrading home RAM");
       homeRAMCost = ns.singularity.getUpgradeHomeRamCost();
       money = ns.getServerMoneyAvailable("home");
       await ns.sleep(20);
@@ -316,7 +316,7 @@ export async function main(ns) {
     for (let invitation of invitations) {
       if (!ignore.includes(invitation)) {
         ns.singularity.joinFaction(invitation);
-        ns.tprint("[factions] joined ", invitation);
+        ns.tprintf("[factions] joined ", invitation);
       }
     }
 
@@ -348,7 +348,7 @@ export async function main(ns) {
             augmentation,
           );
           if (purchased) {
-            ns.tprint(
+            ns.tprintf(
               "[augmentations] bought ",
               augmentation,
               " from ",
@@ -391,7 +391,7 @@ export async function main(ns) {
             !limit
           ) {
             ns.bladeburner.upgradeSkill(skill, 1);
-            ns.tprint(
+            ns.tprintf(
               "[bladeburner] upgrading ",
               skill,
               " for ",
