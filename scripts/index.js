@@ -349,9 +349,9 @@ export async function main(ns) {
           );
           if (purchased) {
             ns.tprintf(
-              "[augmentations] bought ",
-              augmentation,
-              " from ",
+              "[augmentations] bought " +
+              augmentation +
+              " from " +
               faction,
             );
             break;
@@ -392,10 +392,10 @@ export async function main(ns) {
           ) {
             ns.bladeburner.upgradeSkill(skill, 1);
             ns.tprintf(
-              "[bladeburner] upgrading ",
-              skill,
-              " for ",
-              min,
+              "[bladeburner] upgrading " +
+              skill +
+              " for " +
+              min +
               " points",
             );
           }

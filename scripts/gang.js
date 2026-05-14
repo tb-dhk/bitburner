@@ -120,8 +120,8 @@ export async function main(ns) {
     chance /= remainingGangs;
     if (!(iterCount % 1000) && chance) {
       ns.tprintf(
-        "[gang] overall win chance: ",
-        (chance * 100).toPrecision(3),
+        "[gang] overall win chance: " +
+        (chance * 100).toPrecision(3) +
         "%",
       );
     }
